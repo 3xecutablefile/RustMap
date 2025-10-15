@@ -1,4 +1,4 @@
-# rustmap
+# Rustmap
 
 A fast port scanner and exploit finder written in Rust.
 
