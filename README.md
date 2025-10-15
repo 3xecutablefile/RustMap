@@ -4,12 +4,12 @@ A fast port scanner and exploit finder written in Rust.
 
 ## Features
 
-- ⚡ **Fast port scanning** - Scans all 65535 ports with parallel processing
-- 🔍 **Service detection** - Uses nmap for accurate service identification  
-- 💥 **Exploit searching** - Automatically searches for exploits using searchsploit
-- 📊 **Risk scoring** - Calculates risk scores based on CVSS and exploit count
-- 🎨 **Beautiful output** - Colorized terminal output with progress bars
-- 📄 **JSON support** - Export results in JSON format
+- **Fast port scanning** - Scans all 65535 ports with parallel processing
+- **Service detection** - Uses nmap for accurate service identification  
+- **Exploit searching** - Automatically searches for exploits using searchsploit
+- **Risk scoring** - Calculates risk scores based on CVSS and exploit count
+- **Beautiful output** - Colorized terminal output with progress bars
+- **JSON support** - Export results in JSON format
 
 ## Installation
 
