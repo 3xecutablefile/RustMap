@@ -1,0 +1,19 @@
+[package]
+name = "rustmap"
+version = "0.1.0"
+edition = "2021"
+authors = ["ur mom"]
+description = "Fast port scanner and exploit finder written in Rust"
+license = "MIT"
+
+[dependencies]
+rayon = "1.8"
+colored = "2.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+roxmltree = "0.19"
+regex = "1.10"
+
+[[bin]]
+name = "rustmap"
+path = "rustmap.rs"
