@@ -16,7 +16,7 @@ A fast port scanner and exploit finder written in Rust.
 ### From Source
 ```bash
 git clone https://github.com/3xecutablefile/RustMap.git
-cd rustmap-project
+cd Rustmap
 cargo install --path .
 ```
 
