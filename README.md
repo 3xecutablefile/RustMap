@@ -1,63 +1,61 @@
-# Rustmap
+# RustMap
 
-A fast port scanner and exploit finder written in Rust.
+RustMap is a fast banner-grabbing port scanner that enriches findings with exploit-db lookups.
+It launches highly parallel TCP connect probes, fingerprints common services using a curated set
+of nmap-style payloads, and then ranks any matching exploits by an opinionated risk score.
 
 ## Features
 
-- **Fast port scanning** - Scans all 65535 ports with parallel processing
-- **Service detection** - Uses nmap for accurate service identification  
-- **Exploit searching** - Automatically searches for exploits using searchsploit
-- **Risk scoring** - Calculates risk scores based on CVSS and exploit count
-- **Beautiful output** - Colorized terminal output with progress bars
-- **JSON support** - Export results in JSON format
+- ⚡ **Fast TCP scanner** – scan the top 1k–30k ports or all 65,535 with a multithreaded engine.
+- 🔍 **Lightweight service detection** – banner grabbing and protocol-specific probes inspired by nmap fingerprints.
+- 💥 **Exploit enrichment** – automatic `searchsploit` queries for each detected product/version pair.
+- 📊 **Risk scoring** – heuristic score based on exploit count, CVSS keywords, and service criticality.
+- 🎨 **Rich terminal UX** – live progress bars, color-coded risk cards, and optional JSON output for automation.
+
+## Requirements
+
+- Rust 1.70 or newer
+- `searchsploit` (from exploit-db) available on your `$PATH`
 
 ## Installation
 
-### From Source
 ```bash
 git clone https://github.com/3xecutablefile/RustMap.git
-cd Rustmap
+cd RustMap
 cargo install --path .
 ```
 
-### Requirements
-- `nmap` - For service detection
-- `searchsploit` - For exploit database searching
-- Rust 1.70+
-
 ## Usage
 
-```bash
-rustmap <target> [options]
+```
+rustmap <target> [-1k|-2k|...|-30k] [--json]
 ```
 
 ### Options
-- `--nmap-only` - Use only nmap scanning (skip fast scan)
-- `--json` - Output results in JSON format
+
+- `-Nk` – limit the scan to the first `N * 1000` TCP ports (e.g. `-5k` scans ports 1–5000). Without this flag, RustMap scans all 65,535 ports.
+- `--json` – emit structured output instead of the interactive TUI.
 
 ### Examples
 
 ```bash
-# Basic scan
-rustmap 192.168.1.1
+# Scan the default full port range
+rustmap 192.168.1.10
 
-# Scan with nmap only
-rustmap 192.168.1.1 --nmap-only
+# Scan the top 5000 ports only
+rustmap example.com -5k
 
-# Get JSON output
-rustmap 192.168.1.1 --json
-
-# Scan a domain
-rustmap example.com
+# Pipe JSON results into jq
+rustmap target.local --json | jq
 ```
 
 ## How it works
 
-1. **Fast Port Scan** - Quickly scans all 65535 ports using parallel TCP connections
-2. **Service Detection** - Runs nmap on discovered open ports for service identification
-3. **Exploit Search** - Searches exploit-db for known vulnerabilities
-4. **Risk Assessment** - Calculates risk scores based on CVSS ratings and exploit count
-5. **Results Display** - Shows findings with color-coded risk levels
+1. **Target resolution** – resolve the hostname once and reuse every socket address.
+2. **Parallel TCP scan** – fire short-lived TCP connect attempts across a rayon thread pool.
+3. **Protocol fingerprinting** – run null reads and targeted probes to capture banners and detect services.
+4. **Exploit lookup** – query `searchsploit` for each unique product/version signature.
+5. **Risk aggregation** – score and sort results before presenting either JSON or rich terminal cards.
 
 ## License
 
@@ -65,5 +63,4 @@ MIT
 
 ## Author
 
-Made by: 3xecutable
-# RustMap
+Made by: 3xecutablefile
