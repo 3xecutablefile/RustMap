@@ -392,7 +392,8 @@ fn detect_services(target: &str, ports: &[Port], quiet: bool) -> Vec<Port> {
         h.join().unwrap();
     }
 
-    detected.lock().unwrap().clone()
+    let detected_ports = detected.lock().unwrap().clone();
+    detected_ports
 }
 
 fn probe_service_intensive(host: &str, port: u16) -> Port {
