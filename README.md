@@ -6,11 +6,11 @@ of nmap-style payloads, and then ranks any matching exploits by an opinionated r
 
 ## Features
 
-- ⚡ **Fast TCP scanner** – scan the top 1k–30k ports or all 65,535 with a multithreaded engine.
-- 🔍 **Lightweight service detection** – banner grabbing and protocol-specific probes inspired by nmap fingerprints.
-- 💥 **Exploit enrichment** – automatic `searchsploit` queries for each detected product/version pair.
-- 📊 **Risk scoring** – heuristic score based on exploit count, CVSS keywords, and service criticality.
-- 🎨 **Rich terminal UX** – live progress bars, color-coded risk cards, and optional JSON output for automation.
+-  **Fast TCP scanner** – scan the top 1k–30k ports or all 65,535 with a multithreaded engine.
+-  **Lightweight service detection** – banner grabbing and protocol-specific probes inspired by nmap fingerprints.
+-  **Exploit enrichment** – automatic `searchsploit` queries for each detected product/version pair.
+-  **Risk scoring** – heuristic score based on exploit count, CVSS keywords, and service criticality.
+-  **Rich terminal UX** – live progress bars, color-coded risk cards, and optional JSON output for automation.
 
 ## Requirements
 
