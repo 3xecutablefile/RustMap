@@ -4,10 +4,12 @@
 use colored::*;
 use once_cell::sync::Lazy;
 use rayon::prelude::*;
+use std::sync::Once;
 use regex::Regex;
+use roxmltree::Document;
 use serde::Serialize;
 use std::collections::HashSet;
-use std::io::{Read, Write};
+use std::io::{Write, Read};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::process::Command;
 use std::sync::{
@@ -19,21 +21,6 @@ use std::time::{Duration, Instant};
 
 // static compiled regexes
 static ANSI_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\x1b\[[0-9;]*[mK]").expect("ansi regex"));
-static SSH_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"OpenSSH[_-]([0-9.]+p?[0-9]*)").expect("ssh regex"));
-static HTTP_SERVER_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"([^/\s]+)/([0-9.]+)").expect("http server regex"));
-static FTP_VSFTPD_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"vsFTPd ([0-9.]+)").expect("vsftpd regex"));
-static FTP_PROFTPD_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"ProFTPD ([0-9.]+)").expect("proftpd regex"));
-static FTP_FILEZILLA_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"FileZilla Server ([0-9.]+)").expect("filezilla regex"));
-static MYSQL_VERSION_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"([0-9]+\.[0-9]+\.[0-9]+)").expect("mysql version regex"));
-static REDIS_VERSION_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"redis_version:([0-9.]+)").expect("redis version regex"));
-static EXIM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"Exim ([0-9.]+)").expect("exim regex"));
 
 #[derive(Clone, Debug, Serialize)]
 struct Port {
@@ -58,19 +45,23 @@ struct PortResult {
     risk_score: f32,
 }
 
-struct Probe {
-    name: &'static str,
-    payload: Vec<u8>,
-    ports: Vec<u16>,
-}
+
+
+static INIT: Once = Once::new();
 
 fn main() {
+    INIT.call_once(|| {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(0) // Use all available threads
+            .build_global()
+            .unwrap();
+    });
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
         eprintln!(
             "{}",
-            "usage: rustmap <target> [-1k|-2k|-3k...|-30k] [--json]"
+            "usage: rustmap <target> [--json]"
                 .red()
                 .bold()
         );
@@ -79,11 +70,36 @@ fn main() {
 
     let target = &args[1];
     let json_mode = args.contains(&"--json".to_string());
-    let port_limit = parse_port_limit(&args);
+    let port_limit = if args.iter().any(|arg| arg.starts_with('-') && arg.ends_with('k')) {
+        parse_port_limit(&args)
+    } else {
+        print!("{} Enter number of ports to scan (1-65535, or 'all' for full scan): ", "→".bright_cyan());
+        std::io::stdout().flush().unwrap();
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim().to_lowercase();
+        
+        if input == "all" {
+            65535
+        } else if let Ok(num) = input.parse::<u16>() {
+            if num == 0 {
+                eprintln!("{} Port number must be greater than 0", "✗".red().bold());
+                std::process::exit(1);
+            }
+            num
+        } else {
+            eprintln!("{} Invalid port number: {}", "✗".red().bold(), input);
+            std::process::exit(1);
+        }
+    };
 
-    // check if searchsploit exists
+    // check if required binaries exist
     if !check_binary_in_path("searchsploit") {
         eprintln!("{} searchsploit not found in PATH", "✗".red().bold());
+        std::process::exit(1);
+    }
+    if !check_binary_in_path("nmap") {
+        eprintln!("{} nmap not found in PATH", "✗".red().bold());
         std::process::exit(1);
     }
 
@@ -220,7 +236,7 @@ fn parse_port_limit(args: &[String]) -> u16 {
         if arg.starts_with('-') && arg.ends_with('k') {
             let num_str = &arg[1..arg.len() - 1];
             if let Ok(num) = num_str.parse::<u16>() {
-                if num >= 1 && num <= 30 {
+                if (1..=30).contains(&num) {
                     return num * 1000;
                 }
             }
@@ -248,12 +264,9 @@ fn tcp_connect_addrs(addrs: &[SocketAddr], port: u16, timeout: Duration) -> bool
     for base in addrs {
         let mut sa = *base;
         sa.set_port(port);
-        for _ in 0..2 {
-            match TcpStream::connect_timeout(&sa, timeout) {
-                Ok(_) => return true,
-                Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused => continue,
-                _ => break,
-            }
+        match TcpStream::connect_timeout(&sa, timeout) {
+            Ok(_) => return true,
+            Err(_) => continue,
         }
     }
     false
@@ -267,7 +280,7 @@ fn check_binary_in_path(bin: &str) -> bool {
 }
 
 fn fast_scan_all(target_addrs: &[SocketAddr], quiet: bool, port_limit: u16) -> Vec<Port> {
-    let timeout = Duration::from_millis(80);
+    let timeout = Duration::from_millis(25);
     let scanned = Arc::new(AtomicUsize::new(0));
 
     let ports: Vec<u16> = get_port_list(port_limit);
@@ -338,8 +351,8 @@ fn fast_scan_all(target_addrs: &[SocketAddr], quiet: bool, port_limit: u16) -> V
 }
 
 fn get_port_list(limit: u16) -> Vec<u16> {
-    if limit >= 65535 {
-        return (1..=65535).collect();
+    if limit == u16::MAX {
+        return (1..=u16::MAX).collect();
     }
     (1..=limit).collect()
 }
@@ -358,450 +371,146 @@ fn progress_bar(percent: usize, width: usize) -> String {
 }
 
 fn detect_services(target: &str, ports: &[Port], quiet: bool) -> Vec<Port> {
-    let detected = Arc::new(Mutex::new(Vec::new()));
-    let scanned = Arc::new(AtomicUsize::new(0));
-    let total = ports.len();
+    if ports.is_empty() {
+        return Vec::new();
+    }
 
-    let progress_handle = if !quiet {
-        let scanned_clone = Arc::clone(&scanned);
-        Some(thread::spawn(move || {
-            loop {
-                let sc = scanned_clone.load(Ordering::Relaxed);
-                let percent = if total > 0 { (sc * 100) / total } else { 100 };
-                let bar = progress_bar(percent, 30);
-                print!("\r[{}] {:3}% service detection", bar, percent);
-                std::io::stdout().flush().unwrap();
-                if sc >= total {
-                    break;
+    if !quiet {
+        println!("{} Running nmap service detection...", "🔍".bright_cyan());
+    }
+
+    let port_list: Vec<String> = ports.iter().map(|p| p.port.to_string()).collect();
+    let ports_str = port_list.join(",");
+
+    let output = Command::new("nmap")
+        .args([
+            "-sV",
+            "--version-intensity",
+            "1",
+            "-p",
+            &ports_str,
+            "-oX",
+            "-",
+            "--open",
+            "--disable-arp-ping",
+            "-Pn",
+            target,
+        ])
+        .output()
+        .map_err(|e| format!("nmap execution failed: {}", e));
+
+    match output {
+        Ok(result) => {
+            if !result.status.success() {
+                if !quiet {
+                    eprintln!("{} nmap failed: {}", "⚠".yellow(), 
+                             String::from_utf8_lossy(&result.stderr));
                 }
-                thread::sleep(Duration::from_millis(100));
+                return Vec::new();
             }
-            println!();
-        }))
-    } else {
-        None
+
+            let xml_content = String::from_utf8_lossy(&result.stdout);
+            // Remove DTD declaration if present
+            let xml_clean = xml_content.lines()
+                .filter(|line| !line.trim().starts_with("<!DOCTYPE"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            parse_nmap_xml(&xml_clean, &[])
+        }
+        Err(e) => {
+            if !quiet {
+                eprintln!("{} {}", "✗".red().bold(), e);
+            }
+            Vec::new()
+        }
+    }
+}
+
+
+
+fn parse_nmap_xml(xml_content: &str, _original_ports: &[Port]) -> Vec<Port> {
+    let mut detected_ports = Vec::new();
+
+    let doc = match Document::parse(xml_content) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("{} Failed to parse nmap XML: {}", "⚠".yellow(), e);
+            return detected_ports;
+        }
     };
 
-    ports.par_iter().for_each(|port| {
-        let info = probe_service_intensive(target, port.port);
-        detected.lock().unwrap().push(info);
-        scanned.fetch_add(1, Ordering::Relaxed);
-    });
-
-    if let Some(h) = progress_handle {
-        h.join().unwrap();
+    let root = doc.root_element();
+    if root.tag_name().name() != "nmaprun" {
+        eprintln!("{} Invalid nmap XML format", "⚠".yellow());
+        return detected_ports;
     }
 
-    detected.lock().unwrap().clone()
-}
-
-fn probe_service_intensive(host: &str, port: u16) -> Port {
-    let probes = get_nmap_probes();
-
-    if let Some(result) = try_null_probe(host, port) {
-        return result;
-    }
-
-    let relevant_probes: Vec<_> = probes
-        .iter()
-        .filter(|p| p.ports.is_empty() || p.ports.contains(&port))
-        .collect();
-
-    for probe in relevant_probes {
-        if let Some(result) = try_probe(host, port, probe) {
-            return result;
-        }
-    }
-
-    let service = get_service_by_port(port);
-    Port {
-        port,
-        service: service.to_string(),
-        product: "".to_string(),
-        version: "".to_string(),
-    }
-}
-
-fn try_null_probe(host: &str, port: u16) -> Option<Port> {
-    let addr = format!("{}:{}", host, port);
-    let mut stream =
-        TcpStream::connect_timeout(&addr.parse().ok()?, Duration::from_secs(3)).ok()?;
-
-    stream.set_read_timeout(Some(Duration::from_secs(2))).ok()?;
-    let mut buffer = vec![0u8; 4096];
-
-    if let Ok(n) = stream.read(&mut buffer) {
-        if n > 0 {
-            let response = String::from_utf8_lossy(&buffer[..n]).to_string();
-            return parse_response(&response, port);
-        }
-    }
-    None
-}
-
-fn try_probe(host: &str, port: u16, probe: &Probe) -> Option<Port> {
-    let addr = format!("{}:{}", host, port);
-    let mut stream =
-        TcpStream::connect_timeout(&addr.parse().ok()?, Duration::from_secs(2)).ok()?;
-
-    stream
-        .set_write_timeout(Some(Duration::from_secs(1)))
-        .ok()?;
-    stream.set_read_timeout(Some(Duration::from_secs(2))).ok()?;
-
-    if stream.write_all(&probe.payload).is_err() {
-        return None;
-    }
-
-    let mut buffer = vec![0u8; 8192];
-    if let Ok(n) = stream.read(&mut buffer) {
-        if n > 0 {
-            let response = String::from_utf8_lossy(&buffer[..n]).to_string();
-            return parse_response(&response, port);
-        }
-    }
-
-    None
-}
-
-fn get_nmap_probes() -> Vec<Probe> {
-    vec![
-        Probe {
-            name: "GetRequest",
-            payload: b"GET / HTTP/1.0\r\n\r\n".to_vec(),
-            ports: vec![80, 443, 8080, 8443, 8000, 8888],
-        },
-        Probe {
-            name: "HTTPOptions",
-            payload: b"OPTIONS / HTTP/1.0\r\n\r\n".to_vec(),
-            ports: vec![80, 443, 8080],
-        },
-        Probe {
-            name: "Help",
-            payload: b"HELP\r\n".to_vec(),
-            ports: vec![21],
-        },
-        Probe {
-            name: "EHLO",
-            payload: b"EHLO nmap.org\r\n".to_vec(),
-            ports: vec![25, 587],
-        },
-        Probe {
-            name: "POP3",
-            payload: b"CAPA\r\n".to_vec(),
-            ports: vec![110, 995],
-        },
-        Probe {
-            name: "IMAP",
-            payload: b"A001 CAPABILITY\r\n".to_vec(),
-            ports: vec![143, 993],
-        },
-        Probe {
-            name: "MySQL",
-            payload: vec![
-                0x4a, 0x00, 0x00, 0x01, 0x85, 0xa6, 0xff, 0x01, 0x00, 0x00, 0x00, 0x01, 0x21, 0x00,
-                0x00, 0x00,
-            ],
-            ports: vec![3306],
-        },
-        Probe {
-            name: "SMBProgNeg",
-            payload: vec![
-                0x00, 0x00, 0x00, 0x85, 0xff, 0x53, 0x4d, 0x42, 0x72, 0x00, 0x00, 0x00, 0x00, 0x18,
-                0x53, 0xc8,
-            ],
-            ports: vec![445, 139],
-        },
-        Probe {
-            name: "SSLSessionReq",
-            payload: vec![
-                0x16, 0x03, 0x00, 0x00, 0x5a, 0x01, 0x00, 0x00, 0x56, 0x03, 0x00,
-            ],
-            ports: vec![443, 8443, 465, 993, 995],
-        },
-        Probe {
-            name: "SIPOptions",
-            payload: b"OPTIONS sip:nm SIP/2.0\r\n\r\n".to_vec(),
-            ports: vec![5060, 5061],
-        },
-        Probe {
-            name: "RTSPRequest",
-            payload: b"OPTIONS / RTSP/1.0\r\n\r\n".to_vec(),
-            ports: vec![554],
-        },
-        Probe {
-            name: "redis-server",
-            payload: b"INFO\r\n".to_vec(),
-            ports: vec![6379],
-        },
-        Probe {
-            name: "mongodb",
-            payload: vec![0x3a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00],
-            ports: vec![27017],
-        },
-        Probe {
-            name: "PostgreSQL",
-            payload: vec![0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f],
-            ports: vec![5432],
-        },
-        Probe {
-            name: "LDAPBindReq",
-            payload: vec![0x30, 0x0c, 0x02, 0x01, 0x01, 0x60, 0x07, 0x02],
-            ports: vec![389, 636],
-        },
-    ]
-}
-
-fn parse_response(response: &str, port: u16) -> Option<Port> {
-    let lower = response.to_lowercase();
-
-    if response.starts_with("SSH-") {
-        let parts: Vec<_> = response.trim().split_whitespace().collect();
-        if parts.is_empty() {
-            return None;
+    for host in root.children() {
+        if host.tag_name().name() != "host" {
+            continue;
         }
 
-        let banner_parts: Vec<_> = parts[0].split('-').collect();
-        let version = if banner_parts.len() >= 2 {
-            banner_parts[1]
-        } else {
-            "2.0"
-        };
-        let product_info = if banner_parts.len() >= 3 {
-            banner_parts[2]
-        } else {
-            ""
-        };
-
-        let (product, prod_version) = parse_ssh_banner(product_info);
-
-        return Some(Port {
-            port,
-            service: "ssh".to_string(),
-            product,
-            version: format!("{} {}", version, prod_version).trim().to_string(),
-        });
-    }
-
-    if response.starts_with("HTTP/") {
-        let (product, version) = extract_http_info(response);
-        return Some(Port {
-            port,
-            service: if port == 443 { "https" } else { "http" }.to_string(),
-            product,
-            version,
-        });
-    }
-
-    if response.starts_with("220") && (lower.contains("ftp") || port == 21) {
-        let (product, version) = extract_ftp_info(response);
-        return Some(Port {
-            port,
-            service: "ftp".to_string(),
-            product,
-            version,
-        });
-    }
-
-    if response.starts_with("220") && lower.contains("smtp") {
-        let (product, version) = extract_smtp_info(response);
-        return Some(Port {
-            port,
-            service: "smtp".to_string(),
-            product,
-            version,
-        });
-    }
-
-    if response.starts_with("+OK") {
-        return Some(Port {
-            port,
-            service: "pop3".to_string(),
-            product: "".to_string(),
-            version: "".to_string(),
-        });
-    }
-
-    if response.starts_with("* OK") && lower.contains("imap") {
-        return Some(Port {
-            port,
-            service: "imap".to_string(),
-            product: "".to_string(),
-            version: "".to_string(),
-        });
-    }
-
-    if response.len() > 10 && (lower.contains("mysql") || lower.contains("mariadb")) {
-        let (product, version) = extract_mysql_info(response);
-        return Some(Port {
-            port,
-            service: "mysql".to_string(),
-            product,
-            version,
-        });
-    }
-
-    if lower.contains("redis_version") {
-        let version = extract_redis_version(response);
-        return Some(Port {
-            port,
-            service: "redis".to_string(),
-            product: "Redis".to_string(),
-            version,
-        });
-    }
-
-    if lower.contains("mongodb") || lower.contains("ismaster") {
-        return Some(Port {
-            port,
-            service: "mongodb".to_string(),
-            product: "MongoDB".to_string(),
-            version: "".to_string(),
-        });
-    }
-
-    if lower.contains("postgresql") {
-        return Some(Port {
-            port,
-            service: "postgresql".to_string(),
-            product: "PostgreSQL".to_string(),
-            version: "".to_string(),
-        });
-    }
-
-    if lower.contains("smb") || lower.contains("samba") {
-        return Some(Port {
-            port,
-            service: "microsoft-ds".to_string(),
-            product: "Samba smbd".to_string(),
-            version: "".to_string(),
-        });
-    }
-
-    None
-}
-
-fn parse_ssh_banner(banner: &str) -> (String, String) {
-    if let Some(cap) = SSH_RE.captures(banner) {
-        return ("OpenSSH".to_string(), cap[1].to_string());
-    }
-
-    if banner.contains("Cisco") {
-        return ("Cisco SSH".to_string(), "".to_string());
-    }
-
-    if banner.to_lowercase().contains("dropbear") {
-        return ("Dropbear".to_string(), "".to_string());
-    }
-
-    ("".to_string(), "".to_string())
-}
-
-fn extract_http_info(response: &str) -> (String, String) {
-    for line in response.lines() {
-        if line.to_lowercase().starts_with("server:") {
-            let server = line.split(':').nth(1).unwrap_or("").trim();
-
-            if let Some(cap) = HTTP_SERVER_RE.captures(server) {
-                return (cap[1].to_string(), cap[2].to_string());
+        for ports_elem in host.children() {
+            if ports_elem.tag_name().name() != "ports" {
+                continue;
             }
 
-            return (server.to_string(), "".to_string());
+            for port_elem in ports_elem.children() {
+                if port_elem.tag_name().name() != "port" {
+                    continue;
+                }
+
+                let port_id = match port_elem.attribute("portid") {
+                    Some(p) => p.parse::<u16>().unwrap_or(0),
+                    None => continue,
+                };
+
+                if port_id == 0 {
+                    continue;
+                }
+
+                let mut service_name = "unknown".to_string();
+                let mut product = "".to_string();
+                let mut version = "".to_string();
+
+                for service_elem in port_elem.children() {
+                    if service_elem.tag_name().name() != "service" {
+                        continue;
+                    }
+
+                    service_name = service_elem
+                        .attribute("name")
+                        .unwrap_or("unknown")
+                        .to_string();
+
+                    product = service_elem
+                        .attribute("product")
+                        .unwrap_or("")
+                        .to_string();
+
+                    version = service_elem
+                        .attribute("version")
+                        .unwrap_or("")
+                        .to_string();
+
+                    break;
+                }
+
+                detected_ports.push(Port {
+                    port: port_id,
+                    service: service_name,
+                    product,
+                    version,
+                });
+            }
         }
     }
-    ("".to_string(), "".to_string())
+
+    detected_ports.sort_by_key(|p| p.port);
+    detected_ports
 }
 
-fn extract_ftp_info(banner: &str) -> (String, String) {
-    if let Some(cap) = FTP_VSFTPD_RE.captures(banner) {
-        return ("vsftpd".to_string(), cap[1].to_string());
-    }
-    if let Some(cap) = FTP_PROFTPD_RE.captures(banner) {
-        return ("ProFTPD".to_string(), cap[1].to_string());
-    }
-    if let Some(cap) = FTP_FILEZILLA_RE.captures(banner) {
-        return ("FileZilla".to_string(), cap[1].to_string());
-    }
-    if banner.to_lowercase().contains("pure-ftpd") {
-        return ("Pure-FTPd".to_string(), "".to_string());
-    }
 
-    ("".to_string(), "".to_string())
-}
-
-fn extract_smtp_info(banner: &str) -> (String, String) {
-    let lower = banner.to_lowercase();
-    if lower.contains("postfix") {
-        return ("Postfix".to_string(), "".to_string());
-    }
-    if lower.contains("exim") {
-        if let Some(cap) = EXIM_RE.captures(banner) {
-            return ("Exim".to_string(), cap[1].to_string());
-        }
-        return ("Exim".to_string(), "".to_string());
-    }
-    if lower.contains("sendmail") {
-        return ("Sendmail".to_string(), "".to_string());
-    }
-    ("".to_string(), "".to_string())
-}
-
-fn extract_mysql_info(response: &str) -> (String, String) {
-    let lower = response.to_lowercase();
-
-    if lower.contains("mariadb") {
-        if let Some(cap) = MYSQL_VERSION_RE.find(response) {
-            return ("MariaDB".to_string(), cap.as_str().to_string());
-        }
-        return ("MariaDB".to_string(), "".to_string());
-    }
-
-    if let Some(cap) = MYSQL_VERSION_RE.find(response) {
-        return ("MySQL".to_string(), cap.as_str().to_string());
-    }
-
-    ("MySQL".to_string(), "".to_string())
-}
-
-fn extract_redis_version(response: &str) -> String {
-    if let Some(cap) = REDIS_VERSION_RE.captures(response) {
-        return cap[1].to_string();
-    }
-    "".to_string()
-}
-
-fn get_service_by_port(port: u16) -> &'static str {
-    match port {
-        21 => "ftp",
-        22 => "ssh",
-        23 => "telnet",
-        25 => "smtp",
-        53 => "domain",
-        80 => "http",
-        110 => "pop3",
-        111 => "rpcbind",
-        135 => "msrpc",
-        139 => "netbios-ssn",
-        143 => "imap",
-        443 => "https",
-        445 => "microsoft-ds",
-        465 => "smtps",
-        587 => "submission",
-        993 => "imaps",
-        995 => "pop3s",
-        1433 => "ms-sql-s",
-        1521 => "oracle",
-        3306 => "mysql",
-        3389 => "ms-wbt-server",
-        5432 => "postgresql",
-        5900 => "vnc",
-        6379 => "redis",
-        8080 => "http-proxy",
-        8443 => "https-alt",
-        27017 => "mongodb",
-        _ => "unknown",
-    }
-}
 
 fn build_query(product: &str, version: &str, service: &str) -> String {
     let pv = format!("{} {}", product, version).trim().to_string();
@@ -813,7 +522,7 @@ fn build_query(product: &str, version: &str, service: &str) -> String {
 
 fn search_exploits_default(query: &str) -> Result<Vec<Exploit>, String> {
     let out = Command::new("timeout")
-        .args(&["5", "searchsploit", query])
+        .args(["5", "searchsploit", query])
         .output()
         .map_err(|e| format!("searchsploit: {}", e))?;
 
