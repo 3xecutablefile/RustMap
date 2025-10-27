@@ -2,14 +2,14 @@
 // made by: 3xecutablefile
 
 use colored::*;
-use once_cell::sync::Lazy;
+
 use rayon::prelude::*;
 use std::sync::Once;
-use regex::Regex;
+
 use roxmltree::Document;
 use serde::Serialize;
 use std::collections::HashSet;
-use std::io::{Write, Read};
+use std::io::Write;
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::process::Command;
 use std::sync::{
@@ -19,8 +19,7 @@ use std::sync::{
 use std::thread;
 use std::time::{Duration, Instant};
 
-// static compiled regexes
-static ANSI_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\x1b\[[0-9;]*[mK]").expect("ansi regex"));
+
 
 #[derive(Clone, Debug, Serialize)]
 struct Port {
@@ -137,13 +136,20 @@ fn main() {
 
     if !json_mode {
         println!(
-            "{} Found {} open ports in {:.2?}",
+            "\n{} Found {} open ports in {:.2?}",
             "✓".bright_green(),
             open_ports.len(),
             start.elapsed()
         );
+        
+        // Display open ports immediately
+        println!("\n{} Open Ports:", "📡".bright_cyan().bold());
+        for port in &open_ports {
+            println!("  {} Port {}", "→".bright_blue(), port.port);
+        }
+        
         println!(
-            "{} Detecting services with nmap-style probes...",
+            "\n{} Detecting services with nmap-style probes...",
             "🔍".bright_cyan()
         );
     }
@@ -155,6 +161,18 @@ fn main() {
             println!("{} No services detected", "⚠".yellow());
         }
         std::process::exit(0);
+    }
+
+    if !json_mode {
+        println!("\n{} Service Detection Results:", "🎯".bright_green().bold());
+        for port in &ports {
+            let service_info = if !port.product.is_empty() {
+                format!("{} {} {}", port.service.bright_cyan(), port.product.bright_white(), port.version.bright_black())
+            } else {
+                port.service.bright_cyan().to_string()
+            };
+            println!("  {} Port {}: {}", "→".bright_blue(), port.port, service_info);
+        }
     }
 
     if !json_mode {
@@ -210,24 +228,44 @@ fn main() {
     }
 
     if !final_results.is_empty() {
+        println!("\n{} Exploit Analysis Results:", "💥".bright_magenta().bold());
         for result in &final_results {
             print_results(result);
         }
+        
+        // Summary
+        let total_exploits: usize = final_results.iter().map(|r| r.exploits.len()).sum();
+        let high_risk_count = final_results.iter().filter(|r| r.risk_score >= 30.0).count();
+        
+        println!("\n{} Summary:", "📊".bright_cyan().bold());
+        println!("  {} Total exploits found: {}", "→".bright_blue(), total_exploits.to_string().bright_yellow());
+        println!("  {} High-risk services: {}", "→".bright_blue(), high_risk_count.to_string().bright_red());
+        println!("  {} Services analyzed: {}", "→".bright_blue(), final_results.len().to_string().bright_green());
+        
     } else {
         println!(
             "\n{} No exploits found for detected services.",
             "✓".bright_green()
         );
+        println!("\n{} Secure Services:", "🛡️".bright_green().bold());
         for port in &ports {
+            let service_info = if !port.product.is_empty() {
+                format!("{} {} {}", port.service.bright_cyan(), port.product.bright_white(), port.version.bright_black())
+            } else {
+                port.service.bright_cyan().to_string()
+            };
             println!(
-                "  {}Port {}: {} {} {}",
+                "  {} Port {}: {}",
                 "→".bright_blue(),
                 port.port,
-                port.service.bright_cyan(),
-                port.product.bright_white(),
-                port.version.bright_black()
+                service_info
             );
         }
+        
+        println!("\n{} This is good! However, keep in mind:", "💡".bright_yellow().bold());
+        println!("  {} No public exploits ≠ No vulnerabilities", "•".bright_yellow());
+        println!("  {} Always verify services are up-to-date", "•".bright_yellow());
+        println!("  {} Consider running additional security scans", "•".bright_yellow());
     }
 }
 
@@ -311,7 +349,8 @@ fn fast_scan_all(target_addrs: &[SocketAddr], quiet: bool, port_limit: u16) -> V
                 }
                 thread::sleep(Duration::from_millis(100));
             }
-            println!();
+            print!("\r");
+            std::io::stdout().flush().unwrap();
         }))
     } else {
         None
@@ -513,18 +552,76 @@ fn parse_nmap_xml(xml_content: &str, _original_ports: &[Port]) -> Vec<Port> {
 
 
 fn build_query(product: &str, version: &str, service: &str) -> String {
-    let pv = format!("{} {}", product, version).trim().to_string();
-    if !pv.is_empty() {
-        return pv;
+    // Build multiple search queries for better results
+    let product_version = format!("{} {}", product, version).trim().to_string();
+    
+    // Prefer product+version if available
+    if !product_version.is_empty() && product_version != " " {
+        return product_version;
     }
+    
+    // Fall back to product only
+    if !product.is_empty() {
+        return product.to_string();
+    }
+    
+    // Finally use service name
     service.to_string()
 }
 
 fn search_exploits_default(query: &str) -> Result<Vec<Exploit>, String> {
-    let out = Command::new("timeout")
-        .args(["5", "searchsploit", query])
-        .output()
-        .map_err(|e| format!("searchsploit: {}", e))?;
+    // Try multiple search strategies for better results
+    let mut all_exploits = Vec::new();
+    
+    // Strategy 1: Exact match search
+    if let Ok(exploits) = search_exploits_with_options(query, &["-e"]) {
+        all_exploits.extend(exploits);
+    }
+    
+    // Strategy 2: Fuzzy search if no exact results
+    if all_exploits.is_empty() {
+        if let Ok(exploits) = search_exploits_with_options(query, &[]) {
+            all_exploits.extend(exploits);
+        }
+    }
+    
+    // Strategy 3: Try searching for just the service name if query is complex
+    if all_exploits.is_empty() && query.contains(' ') {
+        let simple_query = query.split_whitespace().next().unwrap_or(query);
+        if let Ok(exploits) = search_exploits_with_options(simple_query, &[]) {
+            all_exploits.extend(exploits);
+        }
+    }
+    
+    // Remove duplicates and sort by relevance
+    all_exploits.sort_by(|a, b| {
+        // Prioritize exploits with CVSS scores
+        match (a.cvss, b.cvss) {
+            (Some(a_score), Some(b_score)) => b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => a.title.cmp(&b.title),
+        }
+    });
+    
+    all_exploits.dedup_by(|a, b| a.title == b.title && a.path == b.path);
+    
+    Ok(all_exploits)
+}
+
+fn search_exploits_with_options(query: &str, options: &[&str]) -> Result<Vec<Exploit>, String> {
+    let mut cmd = Command::new("timeout");
+    cmd.args(["10", "searchsploit"]);
+    
+    // Add options if provided
+    for opt in options {
+        cmd.arg(opt);
+    }
+    
+    cmd.arg(query);
+    
+    let out = cmd.output()
+        .map_err(|e| format!("searchsploit execution failed: {}", e))?;
 
     if !out.status.success() {
         return Err(format!(
@@ -537,48 +634,111 @@ fn search_exploits_default(query: &str) -> Result<Vec<Exploit>, String> {
     let mut exploits = Vec::new();
 
     for line in text.lines() {
-        if line.contains("----") || line.contains("Exploit Title") || line.trim().is_empty() {
+        // Skip header lines and separators
+        if line.contains("----") || 
+           line.contains("Exploit Title") || 
+           line.contains("Title") || 
+           line.contains("Path") || 
+           line.trim().is_empty() ||
+           line.starts_with("  #") {
             continue;
         }
-        let parts: Vec<_> = line.splitn(2, " | ").collect();
-        if parts.len() == 2 {
+        
+        // Parse the exploit line format: "Title | Path"
+        let parts: Vec<_> = line.splitn(3, " | ").collect();
+        if parts.len() >= 2 {
             let title = parts[0].trim().to_string();
-            let path = parts[1].trim().to_string();
+            let path = if parts.len() == 3 {
+                format!("{} | {}", parts[1].trim(), parts[2].trim())
+            } else {
+                parts[1].trim().to_string()
+            };
+            
+            // Skip if title is just a number (malformed line)
+            if title.parse::<u32>().is_ok() {
+                continue;
+            }
+            
             let cvss_score = extract_cvss(&title);
+            let url = format!("https://www.exploit-db.com/{}", 
+                path.split('/').last().unwrap_or(&path).replace(".txt", "").replace(".rb", ""));
+            
             exploits.push(Exploit {
                 title,
-                url: String::new(),
+                url,
                 cvss: cvss_score,
                 path,
             });
         }
     }
+    
     Ok(exploits)
 }
 
 fn extract_cvss(text: &str) -> Option<f32> {
     let t = text.to_lowercase();
 
+    // Critical vulnerabilities (9.0-10.0)
     if t.contains("remote code execution") || t.contains("rce") {
+        Some(9.8)
+    } else if t.contains("pre-authentication rce") || t.contains("unauthenticated rce") {
+        Some(10.0)
+    } else if t.contains("authentication bypass") && (t.contains("remote") || t.contains("network")) {
         Some(9.8)
     } else if t.contains("authentication bypass") {
         Some(9.1)
+    } else if t.contains("sql injection") && (t.contains("blind") || t.contains("time-based")) {
+        Some(8.9)
     } else if t.contains("sql injection") || t.contains("sqli") {
         Some(8.1)
+    } else if t.contains("buffer overflow") && t.contains("remote") {
+        Some(9.3)
     } else if t.contains("buffer overflow") {
         Some(8.5)
+    } else if t.contains("file upload") && t.contains("remote code execution") {
+        Some(9.8)
     } else if t.contains("file upload") {
         Some(8.9)
+    } 
+    // High vulnerabilities (7.0-8.9)
+    else if t.contains("privilege escalation") && t.contains("root") {
+        Some(8.8)
     } else if t.contains("privilege escalation") {
         Some(7.8)
-    } else if t.contains("directory traversal") {
+    } else if t.contains("remote command injection") {
+        Some(9.0)
+    } else if t.contains("command injection") {
+        Some(8.6)
+    } else if t.contains("deserialization") && t.contains("remote") {
+        Some(8.5)
+    } 
+    // Medium vulnerabilities (4.0-6.9)
+    else if t.contains("directory traversal") && t.contains("root") {
+        Some(7.5)
+    } else if t.contains("directory traversal") || t.contains("path traversal") {
         Some(6.8)
-    } else if t.contains("xss") || t.contains("cross site") {
+    } else if t.contains("cross-site scripting") && t.contains("stored") {
+        Some(7.5)
+    } else if t.contains("xss") || t.contains("cross site") || t.contains("cross-site scripting") {
         Some(6.1)
+    } else if t.contains("csrf") || t.contains("cross-site request forgery") {
+        Some(6.5)
     } else if t.contains("denial of service") || t.contains("dos") {
         Some(5.3)
+    } else if t.contains("information disclosure") && t.contains("sensitive") {
+        Some(5.5)
     } else if t.contains("information disclosure") {
         Some(4.3)
+    } 
+    // Low vulnerabilities (0.1-3.9)
+    else if t.contains("brute force") {
+        Some(5.0)
+    } else if t.contains("clickjacking") {
+        Some(4.3)
+    } else if t.contains("csrf") {
+        Some(6.5)
+    } else if t.contains("ssrf") {
+        Some(7.5)
     } else {
         None
     }
@@ -622,62 +782,85 @@ fn print_results(result: &PortResult) {
         "🟢 LOW".green()
     };
 
-    let mut max_width = 50;
-    for exploit in exploits {
-        let len = strip_ansi(&format!("{}  {}", exploit.title, exploit.path)).len();
-        max_width = max_width.max(len);
-    }
+    let service_info = if !port.product.is_empty() {
+        format!("{} {} {}", port.service.bright_cyan(), port.product.bright_white(), port.version.bright_black())
+    } else {
+        port.service.bright_cyan().to_string()
+    };
 
     let header = format!(
-        "Port {} | {} {} | Risk: {:.1}",
-        port.port, port.product, port.version, result.risk_score
+        "Port {} | {} | Risk: {:.1} | {} exploits",
+        port.port, service_info, result.risk_score, exploits.len()
     );
-    let header_vis = strip_ansi(&header);
-    max_width = max_width.max(header_vis.len());
-    max_width += 4;
 
-    let bar = "━".repeat(max_width);
-
-    println!("\n{}╭{}╮{}", "".bright_black(), bar, "".clear());
+    println!("\n{}╭{}╮", "┃".bright_black(), "━".repeat(header.len() + 4));
     println!(
-        "{}│{} {} {:<width$} {}│{}",
-        "".bright_black(),
-        "".clear(),
+        "{}│ {} {} {}│",
+        "┃".bright_black(),
         risk_color,
         header,
-        "".bright_black(),
-        "".clear(),
-        width = max_width.saturating_sub(20)
+        "┃".bright_black()
     );
-    println!("{}├{}┤{}", "".bright_black(), bar, "".clear());
+    println!("{}├{}┤", "┃".bright_black(), "─".repeat(header.len() + 4));
 
-    for exploit in exploits.iter().take(10) {
-        let line = format!("{}  {}", exploit.title, exploit.path.bright_black());
+    if exploits.is_empty() {
         println!(
-            "{}│{}  {:<width$}  {}│{}",
-            "".bright_black(),
-            "".clear(),
-            line,
-            "".bright_black(),
-            "".clear(),
-            width = max_width - 2
+            "{}│  {} No exploits found {}│",
+            "┃".bright_black(),
+            "✓".bright_green(),
+            "┃".bright_black()
         );
+    } else {
+        for (i, exploit) in exploits.iter().take(10).enumerate() {
+            let cvss_indicator = if let Some(cvss) = exploit.cvss {
+                if cvss >= 9.0 {
+                    format!(" {}{} ", "[".red(), format!("{:.1}", cvss).red().bold())
+                } else if cvss >= 7.0 {
+                    format!(" {}{} ", "[".bright_red(), format!("{:.1}", cvss).bright_red().bold())
+                } else if cvss >= 4.0 {
+                    format!(" {}{} ", "[".yellow(), format!("{:.1}", cvss).yellow().bold())
+                } else {
+                    format!(" {}{} ", "[".green(), format!("{:.1}", cvss).green())
+                }
+            } else {
+                " [?.?] ".bright_black().to_string()
+            };
+
+            println!(
+                "{}│{} {} {} {}│",
+                "┃".bright_black(),
+                cvss_indicator,
+                (i + 1).to_string().bright_blue(),
+                exploit.title,
+                "┃".bright_black()
+            );
+            
+            if !exploit.path.is_empty() {
+                println!(
+                    "{}│    {} {}│",
+                    "┃".bright_black(),
+                    exploit.path.bright_black(),
+                    "┃".bright_black()
+                );
+            }
+            
+            if i < exploits.len().saturating_sub(1) && i < 9 {
+                println!("{}│{}│", "┃".bright_black(), " ".repeat(header.len() + 2));
+            }
+        }
+
+        if exploits.len() > 10 {
+            println!(
+                "{}│  {} {} more exploits available {}│",
+                "┃".bright_black(),
+                "...".bright_black(),
+                (exploits.len() - 10).to_string().bright_yellow(),
+                "┃".bright_black()
+            );
+        }
     }
 
-    if exploits.len() > 10 {
-        println!(
-            "{}│{}  {} more exploits... {}│{}",
-            "".bright_black(),
-            "".clear(),
-            exploits.len() - 10,
-            "".bright_black(),
-            "".clear()
-        );
-    }
-
-    println!("{}╰{}╯{}", "".bright_black(), bar, "".clear());
+    println!("{}╰{}╯", "┃".bright_black(), "━".repeat(header.len() + 4));
 }
 
-fn strip_ansi(s: &str) -> String {
-    ANSI_RE.replace_all(s, "").to_string()
-}
+
