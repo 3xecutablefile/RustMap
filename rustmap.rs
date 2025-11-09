@@ -48,23 +48,52 @@ struct PortResult {
 
 static INIT: Once = Once::new();
 
+fn print_usage() {
+    println!("{} RustMap - Fast Port Scanner & Exploit Finder", "INFO".bright_cyan().bold());
+    println!();
+    println!("{} Usage:", "INFO".bright_blue().bold());
+    println!("  rustmap <target> [-Nk] [--json]");
+    println!("  rustmap --update");
+    println!();
+    println!("{} Arguments:", "INFO".bright_blue().bold());
+    println!("  <target>          IP address or hostname to scan (required)");
+    println!();
+    println!("{} Options:", "INFO".bright_blue().bold());
+    println!("  -1k, -2k, -30k   Scan top N*1000 ports (e.g. -5k = 5000 ports)");
+    println!("  --json           Output results in JSON format");
+    println!("  --update         Update searchsploit database and repository");
+    println!();
+    println!("{} Examples:", "INFO".bright_blue().bold());
+    println!("  rustmap scanme.nmap.org");
+    println!("  rustmap scanme.nmap.org -1k");
+    println!("  rustmap scanme.nmap.org -5k --json");
+    println!("  rustmap --update");
+    println!();
+    println!("{} Quick Start:", "INFO".bright_green().bold());
+    println!("  # Scan top 1000 ports (fast)");
+    println!("  rustmap example.com -1k");
+    println!();
+    println!("  # Interactive mode (prompts for port count)");
+    println!("  rustmap example.com");
+    println!();
+    println!("{} For more info: https://github.com/3xecutablefile/RustMap", "INFO".bright_black());
+}
+
 fn main() {
     INIT.call_once(|| {
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(0) // Use all available threads
-            .build_global()
-            .unwrap();
+        rayon::ThreadPoolBuilder::new().build_global().unwrap();
     });
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        eprintln!(
-            "{}",
-            "usage: rustmap <target> [--json]"
-                .red()
-                .bold()
-        );
+        print_usage();
         std::process::exit(1);
+    }
+
+    // Handle update command
+    if args[1] == "--update" {
+        update_searchsploit();
+        return;
     }
 
     let target = &args[1];
@@ -72,7 +101,7 @@ fn main() {
     let port_limit = if args.iter().any(|arg| arg.starts_with('-') && arg.ends_with('k')) {
         parse_port_limit(&args)
     } else {
-        print!("{} Enter number of ports to scan (1-65535, or 'all' for full scan): ", "→".bright_cyan());
+        print!("{} Enter number of ports to scan (1-65535, or 'all' for full scan): ", "->".bright_cyan());
         std::io::stdout().flush().unwrap();
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
@@ -82,23 +111,23 @@ fn main() {
             65535
         } else if let Ok(num) = input.parse::<u16>() {
             if num == 0 {
-                eprintln!("{} Port number must be greater than 0", "✗".red().bold());
+                eprintln!("{} Port number must be greater than 0", "ERROR".red().bold());
                 std::process::exit(1);
             }
             num
         } else {
-            eprintln!("{} Invalid port number: {}", "✗".red().bold(), input);
+            eprintln!("{} Invalid port number: {}", "ERROR".red().bold(), input);
             std::process::exit(1);
         }
     };
 
     // check if required binaries exist
     if !check_binary_in_path("searchsploit") {
-        eprintln!("{} searchsploit not found in PATH", "✗".red().bold());
+        eprintln!("{} searchsploit not found in PATH", "ERROR".red().bold());
         std::process::exit(1);
     }
     if !check_binary_in_path("nmap") {
-        eprintln!("{} nmap not found in PATH", "✗".red().bold());
+        eprintln!("{} nmap not found in PATH", "ERROR".red().bold());
         std::process::exit(1);
     }
 
@@ -106,7 +135,7 @@ fn main() {
     let target_addrs = match resolve_target_addrs(target) {
         Ok(addrs) => addrs,
         Err(e) => {
-            eprintln!("{} {}", "✗".red().bold(), e);
+            eprintln!("{} {}", "ERROR".red().bold(), e);
             std::process::exit(1);
         }
     };
@@ -114,7 +143,7 @@ fn main() {
     if !json_mode {
         println!(
             "{} Fast scanning {} ports on {}...",
-            "⚡".bright_yellow(),
+            "INFO".bright_yellow(),
             if port_limit == 65535 {
                 "all".to_string()
             } else {
@@ -129,7 +158,7 @@ fn main() {
 
     if open_ports.is_empty() {
         if !json_mode {
-            println!("{} No open ports found", "⚠".yellow());
+            println!("{} No open ports found", "WARNING".yellow());
         }
         std::process::exit(0);
     }
@@ -137,20 +166,20 @@ fn main() {
     if !json_mode {
         println!(
             "\n{} Found {} open ports in {:.2?}",
-            "✓".bright_green(),
+            "SUCCESS".bright_green(),
             open_ports.len(),
             start.elapsed()
         );
         
         // Display open ports immediately
-        println!("\n{} Open Ports:", "📡".bright_cyan().bold());
+        println!("\n{} Open Ports:", "INFO".bright_cyan().bold());
         for port in &open_ports {
-            println!("  {} Port {}", "→".bright_blue(), port.port);
+            println!("  {} Port {}", "->".bright_blue(), port.port);
         }
         
         println!(
             "\n{} Detecting services with nmap-style probes...",
-            "🔍".bright_cyan()
+            "INFO".bright_cyan()
         );
     }
 
@@ -158,27 +187,27 @@ fn main() {
 
     if ports.is_empty() {
         if !json_mode {
-            println!("{} No services detected", "⚠".yellow());
+            println!("{} No services detected", "WARNING".yellow());
         }
         std::process::exit(0);
     }
 
     if !json_mode {
-        println!("\n{} Service Detection Results:", "🎯".bright_green().bold());
+        println!("\n{} Service Detection Results:", "INFO".bright_green().bold());
         for port in &ports {
             let service_info = if !port.product.is_empty() {
                 format!("{} {} {}", port.service.bright_cyan(), port.product.bright_white(), port.version.bright_black())
             } else {
                 port.service.bright_cyan().to_string()
             };
-            println!("  {} Port {}: {}", "→".bright_blue(), port.port, service_info);
+            println!("  {} Port {}: {}", "->".bright_blue(), port.port, service_info);
         }
     }
 
     if !json_mode {
         println!(
-            "{} Searching exploits and calculating risk scores...\n",
-            "💥".bright_magenta()
+            "\n{} Searching exploits and calculating risk scores...\n",
+            "INFO".bright_magenta()
         );
     }
 
@@ -209,7 +238,7 @@ fn main() {
             }
             Err(e) => {
                 if !json_mode {
-                    eprintln!("{} searchsploit error for {}: {}", "⚠".yellow(), q, e);
+                    eprintln!("{} searchsploit error for {}: {}", "WARNING".yellow(), q, e);
                 }
             }
         }
@@ -228,26 +257,32 @@ fn main() {
     }
 
     if !final_results.is_empty() {
-        println!("\n{} Exploit Analysis Results:", "💥".bright_magenta().bold());
+        println!("\n{} Exploit Analysis Results:", "INFO".bright_magenta().bold());
         for result in &final_results {
             print_results(result);
         }
         
         // Summary
         let total_exploits: usize = final_results.iter().map(|r| r.exploits.len()).sum();
-        let high_risk_count = final_results.iter().filter(|r| r.risk_score >= 30.0).count();
         
-        println!("\n{} Summary:", "📊".bright_cyan().bold());
-        println!("  {} Total exploits found: {}", "→".bright_blue(), total_exploits.to_string().bright_yellow());
-        println!("  {} High-risk services: {}", "→".bright_blue(), high_risk_count.to_string().bright_red());
-        println!("  {} Services analyzed: {}", "→".bright_blue(), final_results.len().to_string().bright_green());
+        println!("\n{} Summary:", "INFO".bright_cyan().bold());
+        println!(
+            "  {} Total exploits found: {}",
+            "->".bright_blue(),
+            total_exploits.to_string().bright_yellow()
+        );
+        println!(
+            "  {} Services analyzed: {}",
+            "->".bright_blue(),
+            final_results.len().to_string().bright_green()
+        );
         
     } else {
         println!(
             "\n{} No exploits found for detected services.",
-            "✓".bright_green()
+            "SUCCESS".bright_green()
         );
-        println!("\n{} Secure Services:", "🛡️".bright_green().bold());
+        println!("\n{} Secure Services:", "INFO".bright_green().bold());
         for port in &ports {
             let service_info = if !port.product.is_empty() {
                 format!("{} {} {}", port.service.bright_cyan(), port.product.bright_white(), port.version.bright_black())
@@ -256,17 +291,84 @@ fn main() {
             };
             println!(
                 "  {} Port {}: {}",
-                "→".bright_blue(),
+                "->".bright_blue(),
                 port.port,
                 service_info
             );
         }
         
-        println!("\n{} This is good! However, keep in mind:", "💡".bright_yellow().bold());
-        println!("  {} No public exploits ≠ No vulnerabilities", "•".bright_yellow());
-        println!("  {} Always verify services are up-to-date", "•".bright_yellow());
-        println!("  {} Consider running additional security scans", "•".bright_yellow());
+        println!("\n{} This is good! However, keep in mind:", "INFO".bright_yellow().bold());
+        println!("  {} No public exploits != No vulnerabilities", "->".bright_yellow());
+        println!("  {} Always verify services are up-to-date", "->".bright_yellow());
+        println!("  {} Consider running additional security scans", "->".bright_yellow());
     }
+}
+
+fn update_searchsploit() {
+    println!("{} Updating searchsploit database...", "INFO".bright_cyan());
+    
+    // Update searchsploit
+    let output = Command::new("searchsploit")
+        .args(["--update"])
+        .output();
+    
+    match output {
+        Ok(result) => {
+            if result.status.success() {
+                println!("{} Searchsploit database updated successfully", "SUCCESS".bright_green());
+                println!("{}", String::from_utf8_lossy(&result.stdout));
+            } else {
+                eprintln!("{} Failed to update searchsploit: {}", "ERROR".red().bold(), 
+                         String::from_utf8_lossy(&result.stderr));
+                std::process::exit(1);
+            }
+        }
+        Err(e) => {
+            eprintln!("{} Failed to execute searchsploit: {}", "ERROR".red().bold(), e);
+            std::process::exit(1);
+        }
+    }
+    
+    // Update rustmap from git repo
+    println!("{} Updating RustMap from repository...", "INFO".bright_cyan());
+    
+    // Check if we're in a git repo
+    let git_check = Command::new("git")
+        .args(["status"])
+        .output();
+    
+    match git_check {
+        Ok(result) => {
+            if result.status.success() {
+                // Pull latest changes
+                let pull_output = Command::new("git")
+                    .args(["pull", "origin", "main"])
+                    .output();
+                
+                match pull_output {
+                    Ok(pull_result) => {
+                        if pull_result.status.success() {
+                            println!("{} RustMap repository updated successfully", "SUCCESS".bright_green());
+                            println!("{}", String::from_utf8_lossy(&pull_result.stdout));
+                        } else {
+                            eprintln!("{} Failed to pull latest changes: {}", "WARNING".yellow(),
+                                     String::from_utf8_lossy(&pull_result.stderr));
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("{} Failed to execute git pull: {}", "WARNING".yellow(), e);
+                    }
+                }
+            } else {
+                println!("{} Not a git repository, skipping repository update", "WARNING".yellow());
+            }
+        }
+        Err(e) => {
+            eprintln!("{} Git not available or not in git repository: {}", "WARNING".yellow(), e);
+        }
+    }
+    
+    println!("{} Update completed", "SUCCESS".bright_green());
 }
 
 fn parse_port_limit(args: &[String]) -> u16 {
@@ -363,7 +465,7 @@ fn fast_scan_all(target_addrs: &[SocketAddr], quiet: bool, port_limit: u16) -> V
         .map_init(
             || addrs_clone.clone(),
             |addrs_local, &port| {
-                let ok = tcp_connect_addrs(&addrs_local, port, timeout);
+                let ok = tcp_connect_addrs(addrs_local, port, timeout);
                 scanned.fetch_add(1, Ordering::Relaxed);
                 if ok {
                     Some(Port {
@@ -415,7 +517,7 @@ fn detect_services(target: &str, ports: &[Port], quiet: bool) -> Vec<Port> {
     }
 
     if !quiet {
-        println!("{} Running nmap service detection...", "🔍".bright_cyan());
+        println!("{} Running nmap service detection...", "INFO".bright_cyan());
     }
 
     let port_list: Vec<String> = ports.iter().map(|p| p.port.to_string()).collect();
@@ -442,7 +544,7 @@ fn detect_services(target: &str, ports: &[Port], quiet: bool) -> Vec<Port> {
         Ok(result) => {
             if !result.status.success() {
                 if !quiet {
-                    eprintln!("{} nmap failed: {}", "⚠".yellow(), 
+                    eprintln!("{} nmap failed: {}", "WARNING".yellow(), 
                              String::from_utf8_lossy(&result.stderr));
                 }
                 return Vec::new();
@@ -458,7 +560,7 @@ fn detect_services(target: &str, ports: &[Port], quiet: bool) -> Vec<Port> {
         }
         Err(e) => {
             if !quiet {
-                eprintln!("{} {}", "✗".red().bold(), e);
+                eprintln!("{} {}", "ERROR".red().bold(), e);
             }
             Vec::new()
         }
@@ -473,14 +575,14 @@ fn parse_nmap_xml(xml_content: &str, _original_ports: &[Port]) -> Vec<Port> {
     let doc = match Document::parse(xml_content) {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("{} Failed to parse nmap XML: {}", "⚠".yellow(), e);
+            eprintln!("{} Failed to parse nmap XML: {}", "WARNING".yellow(), e);
             return detected_ports;
         }
     };
 
     let root = doc.root_element();
     if root.tag_name().name() != "nmaprun" {
-        eprintln!("{} Invalid nmap XML format", "⚠".yellow());
+        eprintln!("{} Invalid nmap XML format", "WARNING".yellow());
         return detected_ports;
     }
 
@@ -522,15 +624,9 @@ fn parse_nmap_xml(xml_content: &str, _original_ports: &[Port]) -> Vec<Port> {
                         .unwrap_or("unknown")
                         .to_string();
 
-                    product = service_elem
-                        .attribute("product")
-                        .unwrap_or("")
-                        .to_string();
+                    product = service_elem.attribute("product").unwrap_or("").to_string();
 
-                    version = service_elem
-                        .attribute("version")
-                        .unwrap_or("")
-                        .to_string();
+                    version = service_elem.attribute("version").unwrap_or("").to_string();
 
                     break;
                 }
@@ -654,14 +750,14 @@ fn search_exploits_with_options(query: &str, options: &[&str]) -> Result<Vec<Exp
                 parts[1].trim().to_string()
             };
             
-            // Skip if title is just a number (malformed line)
-            if title.parse::<u32>().is_ok() {
+            // Skip if title is just a number and space (malformed line)
+            if title.trim().parse::<u32>().is_ok() && title.trim().len() < 5 {
                 continue;
             }
             
             let cvss_score = extract_cvss(&title);
             let url = format!("https://www.exploit-db.com/{}", 
-                path.split('/').last().unwrap_or(&path).replace(".txt", "").replace(".rb", ""));
+                path.split('/').next_back().unwrap_or(&path).replace(".txt", "").replace(".rb", ""));
             
             exploits.push(Exploit {
                 title,
@@ -735,8 +831,6 @@ fn extract_cvss(text: &str) -> Option<f32> {
         Some(5.0)
     } else if t.contains("clickjacking") {
         Some(4.3)
-    } else if t.contains("csrf") {
-        Some(6.5)
     } else if t.contains("ssrf") {
         Some(7.5)
     } else {
@@ -772,32 +866,28 @@ fn print_results(result: &PortResult) {
     let port = &result.port;
     let exploits = &result.exploits;
 
-    let risk_color = if result.risk_score >= 50.0 {
-        "🔴 CRITICAL".red().bold()
-    } else if result.risk_score >= 30.0 {
-        "🟠 HIGH".bright_red().bold()
-    } else if result.risk_score >= 15.0 {
-        "🟡 MEDIUM".yellow().bold()
-    } else {
-        "🟢 LOW".green()
-    };
-
     let service_info = if !port.product.is_empty() {
-        format!("{} {} {}", port.service.bright_cyan(), port.product.bright_white(), port.version.bright_black())
+        format!(
+            "{} {} {}",
+            port.service.bright_cyan(),
+            port.product.bright_white(),
+            port.version.bright_black()
+        )
     } else {
         port.service.bright_cyan().to_string()
     };
 
     let header = format!(
-        "Port {} | {} | Risk: {:.1} | {} exploits",
-        port.port, service_info, result.risk_score, exploits.len()
+        "Port {} | {} | {} exploits",
+        port.port,
+        service_info,
+        exploits.len()
     );
 
     println!("\n{}╭{}╮", "┃".bright_black(), "━".repeat(header.len() + 4));
     println!(
-        "{}│ {} {} {}│",
+        "{}│ {} {}│",
         "┃".bright_black(),
-        risk_color,
         header,
         "┃".bright_black()
     );
@@ -862,5 +952,3 @@ fn print_results(result: &PortResult) {
 
     println!("{}╰{}╯", "┃".bright_black(), "━".repeat(header.len() + 4));
 }
-
-
