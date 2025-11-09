@@ -1,6 +1,6 @@
 # RustMap
 
-🚀 **Fast port scanner and exploit finder written in Rust**
+**Fast port scanner and exploit finder written in Rust**
 
 RustMap is a high-performance network security tool that quickly scans ports and finds known exploits. Perfect for security professionals, penetration testers, and network administrators.
 
@@ -8,22 +8,24 @@ RustMap is a high-performance network security tool that quickly scans ports and
 [![GitHub issues](https://img.shields.io/github/issues/3xecutablefile/RustMap.svg)](https://github.com/3xecutablefile/RustMap/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## ✨ Why RustMap?
+## Why RustMap?
 
-- ⚡ **Super Fast** - Parallel scanning with optimized performance
-- 🎯 **Accurate** - Professional-grade service detection
-- 💥 **Comprehensive** - Automatic exploit database integration
-- 🛡️ **Safe** - Built-in rate limiting and error handling
-- 📊 **Professional** - Clean output and JSON export
-- 
-1. [Installation](#-installation)
-2. [Basic Usage](#-basic-usage)
-3. [Common Examples](#-common-examples)
-4. [Advanced Features](#-advanced-features)
-5. [Troubleshooting](#-troubleshooting)
-6. [Full Documentation](#-full-documentation)
+- **Super Fast** - Parallel scanning with optimized performance
+- **Accurate** - Professional-grade service detection
+- **Comprehensive** - Automatic exploit database integration
+- **Safe** - Built-in rate limiting and error handling
+- **Professional** - Clean output and JSON export
 
-## 🔧 Installation
+## Table of Contents
+
+1. [Installation](#installation)
+2. [Basic Usage](#basic-usage)
+3. [Common Examples](#common-examples)
+4. [Advanced Features](#advanced-features)
+5. [Troubleshooting](#troubleshooting)
+6. [Full Documentation](#full-documentation)
+
+## Installation
 
 ### Option 1: Automatic Installation (Recommended)
 
@@ -35,11 +37,11 @@ chmod +x install.sh
 ```
 
 The installer will:
-- ✅ Install Rust (if needed)
-- ✅ Install nmap and searchsploit
-- ✅ Build RustMap
-- ✅ Add to your system PATH
-- ✅ Verify everything works
+- Install Rust (if needed)
+- Install nmap and searchsploit
+- Build RustMap
+- Add to your system PATH
+- Verify everything works
 
 ### Option 2: Manual Installation
 
@@ -56,7 +58,7 @@ cargo build --release
 sudo cp target/release/rustmap /usr/local/bin/
 ```
 
-## 📖 Basic Usage
+## Basic Usage
 
 ### Simple Port Scan
 ```bash
@@ -71,12 +73,12 @@ rustmap scanme.nmap.org -1k
 ```
 
 The tool will:
-1. 🔍 Scan open ports
-2. 🏷️ Identify services
-3. 💥 Find related exploits
-4. 📊 Show risk assessment
+1. Scan open ports
+2. Identify services
+3. Find related exploits
+4. Show risk assessment
 
-## 🎯 Common Examples
+## Common Examples
 
 ### Network Reconnaissance
 ```bash
@@ -107,10 +109,10 @@ for target in target1.com target2.com target3.com; do
 done
 
 # Monitor for new services
-rustmap target.com -1k | grep "HIGH\|CRITICAL"
+rustmap target.com -1k | grep "HIGH|CRITICAL"
 ```
 
-## ⚙️ Advanced Features
+## Advanced Features
 
 ### Performance Tuning
 ```bash
@@ -142,27 +144,27 @@ export RUSTMAP_LOG_LEVEL=debug
 export RUSTMAP_SCANNER_RATE_LIMIT=100
 ```
 
-## 🛠️ Output Examples
+## Output Examples
 
 ### Terminal Output
 ```bash
 $ rustmap scanme.nmap.org -1k
 
-⚡ Fast scanning top 1000 ports on scanme.nmap.org...
+Fast scanning top 1000 ports on scanme.nmap.org...
 [████████████████████████████████████████] 100% | 1000/1000 scanned | 2.1s
-✓ Found 3 open ports
+Found 3 open ports
 
-📡 Open Ports:
+Open Ports:
   → Port 22 (ssh)
   → Port 80 (http)
   → Port 443 (https)
 
-💥 Exploit Analysis:
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃🟠 HIGH  Port 80 | http Apache | Risk: 45.2 | 8 exploits ┣━━━━━━━┫
-┃  [9.8] 1 Apache HTTP Server 2.4.7 RCE
-┃  [8.1] 2 Apache mod_ssl Heartbleed
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+Exploit Analysis:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HIGH  Port 80 | http Apache | Risk: 45.2 | 8 exploits ━━━━━━━
+  [9.8] 1 Apache HTTP Server 2.4.7 RCE
+  [8.1] 2 Apache mod_ssl Heartbleed
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### JSON Output
@@ -187,7 +189,7 @@ $ rustmap scanme.nmap.org --json | jq '.[0]'
 }
 ```
 
-## 🚀 Quick Installation
+## Quick Installation
 
 ### Automatic Installation (Recommended)
 ```bash
@@ -199,12 +201,12 @@ chmod +x install.sh
 ```
 
 The installation script automatically:
-- ✅ Detects your operating system
-- ✅ Installs all dependencies (Rust, nmap, searchsploit, git, ruby)
-- ✅ Builds RustMap in optimized release mode
-- ✅ Installs to system PATH (/usr/local/bin)
-- ✅ Updates exploit database
-- ✅ Verifies all components are working
+- Detects your operating system
+- Installs all dependencies (Rust, nmap, searchsploit, git, ruby)
+- Builds RustMap in optimized release mode
+- Installs to system PATH (/usr/local/bin)
+- Updates exploit database
+- Verifies all components are working
 
 ### One-Liner Installation
 ```bash
@@ -235,7 +237,7 @@ cd RustMap && cargo build --release
 sudo cp target/release/rustmap /usr/local/bin/
 ```
 
-## 🔧 Usage Examples
+## Usage Examples
 
 ### Basic Scanning
 ```bash
@@ -312,7 +314,7 @@ done < targets.txt
 find . -name "*.json" -exec jq -r '.[] | select(.risk_score > 30) | "\(.port.port) \(.port.service) \(.risk_score)"' {} \;
 ```
 
-## ⚙️ Configuration Options
+## Configuration Options
 
 ### Command Line Arguments
 | Option | Description | Default | Example |
@@ -371,7 +373,7 @@ max_delay = 30000
 backoff_multiplier = 2.0
 ```
 
-## 🔧 How It Works
+## How It Works
 
 ### 1. **Target Resolution**
 - Resolves hostname to IP addresses once and reuses socket addresses
@@ -404,39 +406,39 @@ backoff_multiplier = 2.0
 - Categorizes results: Critical, High, Medium, Low
 - Provides detailed risk analysis with actionable insights
 
-## 📊 Example Output
+## Example Output
 
 ### Terminal Output
 ```bash
 $ rustmap scanme.nmap.org -1k
 
-⚡ Fast scanning top 1000 ports on scanme.nmap.org...
+Fast scanning top 1000 ports on scanme.nmap.org...
 [████████████████████████████████████████] 100% | 1000/1000 scanned | 2.1s
-✓ Found 3 open ports
+Found 3 open ports
 
-📡 Open Ports:
+Open Ports:
   → Port 22
   → Port 80
   → Port 443
 
-🔍 Detecting services with nmap-style probes...
-🎯 Service Detection Results:
+Detecting services with nmap-style probes...
+Service Detection Results:
   → Port 22: ssh OpenSSH 7.4
   → Port 80: http Apache httpd 2.4.7
   → Port 443: ssl Apache httpd 2.4.7
 
-💥 Exploit Analysis Results:
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃🟠 HIGH  Port 80 | http Apache httpd 2.4.7 | Risk: 65.4 | 15 exploits┣━━━━━━━━┫
-┃  [9.8] 1 Apache HTTP Server 2.4.7 mod_rewrite Buffer Overflow
-┃    apache/2.4.7/mod_rewrite.c
-┃  [9.8] 2 Apache HTTP Server 2.4.7 mod_cgi Environment Variable RCE
-┃    linux/remote/39773.txt
-┃  [8.1] 3 Apache HTTP Server 2.4.7 mod_ssl Heartbeat Info Disclosure
-┃    apache/2.4.7/mod_ssl/heartbeat.c
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+Exploit Analysis Results:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HIGH  Port 80 | http Apache httpd 2.4.7 | Risk: 65.4 | 15 exploits━━━━━━━━
+  [9.8] 1 Apache HTTP Server 2.4.7 mod_rewrite Buffer Overflow
+    apache/2.4.7/mod_rewrite.c
+  [9.8] 2 Apache HTTP Server 2.4.7 mod_cgi Environment Variable RCE
+    linux/remote/39773.txt
+  [8.1] 3 Apache HTTP Server 2.4.7 mod_ssl Heartbeat Info Disclosure
+    apache/2.4.7/mod_ssl/heartbeat.c
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 Summary:
+Summary:
   → Total exploits found: 18
   → High-risk services: 1
   → Services analyzed: 3
@@ -465,7 +467,7 @@ $ rustmap scanme.nmap.org -1k
 ]
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Getting "command not found" errors?
 
@@ -523,24 +525,24 @@ sudo ./install.sh
 echo "Checking your setup..."
 
 # Check all required tools
-echo -n "Rust: " && rustc --version 2>/dev/null && echo "✅" || echo "❌ Install Rust first"
-echo -n "nmap: " && nmap --version 2>/dev/null | head -1 && echo "✅" || echo "❌ Install nmap"
-echo -n "searchsploit: " && searchsploit --help 2>/dev/null | head -1 && echo "✅" || echo "❌ Install searchsploit"
-echo -n "rustmap: " && rustmap --help 2>/dev/null | head -1 && echo "✅" || echo "❌ Install rustmap"
+echo -n "Rust: " && rustc --version 2>/dev/null && echo "OK" || echo "Install Rust first"
+echo -n "nmap: " && nmap --version 2>/dev/null | head -1 && echo "OK" || echo "Install nmap"
+echo -n "searchsploit: " && searchsploit --help 2>/dev/null | head -1 && echo "OK" || echo "Install searchsploit"
+echo -n "rustmap: " && rustmap --help 2>/dev/null | head -1 && echo "OK" || echo "Install rustmap"
 
 # Test basic functionality
 echo ""
 echo "Testing basic functionality..."
 if rustmap scanme.nmap.org -1k --json >/dev/null 2>&1; then
-    echo "✅ RustMap is working correctly!"
+    echo "RustMap is working correctly!"
 else
-    echo "❌ RustMap test failed - check the errors above"
+    echo "RustMap test failed - check the errors above"
 fi
 ```
 
-## 📚 Learning Path
+## Learning Path
 
-### 🎯 Beginner (Start Here)
+### Beginner (Start Here)
 ```bash
 # 1. Test with the official nmap test target
 rustmap scanme.nmap.org -1k
@@ -552,7 +554,7 @@ rustmap 127.0.0.1 -1k
 rustmap your-target.com -1k
 ```
 
-### 🚀 Intermediate
+### Intermediate
 ```bash
 # Scan more ports
 rustmap target.com -5k
@@ -564,7 +566,7 @@ rustmap target.com -5k --json
 rustmap target.com -5k --scan-timeout 20
 ```
 
-### 🔥 Advanced
+### Advanced
 ```bash
 # Full port scan
 rustmap target.com
@@ -578,25 +580,25 @@ while read target; do
 done < targets.txt
 ```
 
-## 💡 Pro Tips
+## Pro Tips
 
-### 🔍 Target Selection
+### Target Selection
 - **Public testing targets**: `scanme.nmap.org`, `testphp.vulnweb.com`
 - **Your own systems**: Always scan only systems you own or have permission to test
 - **Internal networks**: Use your internal IP ranges (192.168.x.x, 10.x.x.x)
 
-### ⚡ Performance Tips
+### Performance Tips
 - **Fast scanning**: Use `-1k` or `-5k` flags to limit port range
 - **Slow networks**: Increase `--scan-timeout` to 100-200ms
 - **Resource conservation**: Limit threads with `--threads 4`
 
-### 🛡️ Security Best Practices
+### Security Best Practices
 - **Rate limiting**: Always use in shared networks
 - **Permission**: Only scan systems you own
 - **Updates**: Keep `searchsploit --update` regular
 - **Legal**: Ensure you have authorization before testing
 
-## 🆘 Common Questions
+## Common Questions
 
 **Q: How long does a scan take?**
 A: 
@@ -626,7 +628,7 @@ A: Use conservative settings and test on a small port range first:
 rustmap target.com -1k --scan-timeout 100
 ```
 
-## 🎯 What Next?
+## What Next?
 
 ### Start Scanning
 1. **Test Target**: `rustmap scanme.nmap.org -1k`
@@ -643,7 +645,7 @@ rustmap target.com -1k --scan-timeout 100
 - **Discussions**: [Ask questions](https://github.com/3xecutablefile/RustMap/discussions)
 - **Contributions**: [Help improve RustMap](https://github.com/3xecutablefile/RustMap/pulls)
 
-## 📞 Need Help?
+## Need Help?
 
 ### Quick Self-Help
 ```bash
@@ -664,30 +666,30 @@ searchsploit --update
 - **"Permission denied"**: Use `sudo` or build locally
 
 ### Get Support
-- 📧 **Email**: Create an issue on GitHub
-- 💬 **Chat**: GitHub Discussions
-- 🐛 **Bugs**: GitHub Issues
-- 📖 **Docs**: This README and code comments
+- **Email**: Create an issue on GitHub
+- **Chat**: GitHub Discussions
+- **Bugs**: GitHub Issues
+- **Docs**: This README and code comments
 
-## ⭐ Show Your Support
+## Show Your Support
 
 If RustMap helps you, please:
-- ⭐ **Star** the repository
-- 🐛 **Report** issues you find
-- 💡 **Suggest** improvements
-- 🤝 **Contribute** code or documentation
+- **Star** the repository
+- **Report** issues you find
+- **Suggest** improvements
+- **Contribute** code or documentation
 
-## 🏁 Final Notes
+## Final Notes
 
 **RustMap is a security tool** - use it responsibly and only on systems you own or have permission to test.
 
-**Happy scanning!** 🚀
+**Happy scanning!**
 
 ---
 
-*Made with ❤️ by [3xecutablefile](https://github.com/3xecutablefile)*
+*Made with by [3xecutablefile](https://github.com/3xecutablefile)*
 
-## ⚡ Performance Tuning
+## Performance Tuning
 
 ### System Optimization
 ```bash
@@ -727,7 +729,7 @@ htop -p $(pgrep rustmap)
 iostat -x 1
 ```
 
-## 🛡️ Security Considerations
+## Security Considerations
 
 ### Input Validation
 - All targets are validated according to RFC 1123
@@ -754,7 +756,7 @@ iostat -x 1
 4. **Logging**: Monitor logs for unusual activity
 5. **Resource Limits**: Set appropriate timeouts and thread limits
 
-## 📚 API Reference
+## API Reference
 
 ### Core Modules
 - **`config`** - Configuration management and command-line parsing
@@ -832,7 +834,7 @@ pub enum RiskLevel {
 }
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
@@ -862,17 +864,17 @@ cargo tarpaulin --out html
 - Document public APIs with doc comments
 - Follow semantic versioning for releases
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨‍💻 Author
+## Author
 
 **3xecutablefile**
 - GitHub: [@3xecutablefile](https://github.com/3xecutablefile)
 - Project: [RustMap](https://github.com/3xecutablefile/RustMap)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **nmap** - Network exploration and security auditing
 - **searchsploit** - Exploit database from Offensive Security  
@@ -880,7 +882,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Tokio** - Asynchronous runtime for Rust
 - **Rust Community** - For the excellent ecosystem
 
-## 📞 Support
+## Support
 
 - **Documentation**: [Full documentation](https://docs.rs/rustmap)
 - **Issues**: [GitHub Issues](https://github.com/3xecutablefile/RustMap/issues)
@@ -889,6 +891,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**⚡ Fast • 🔍 Accurate • 🛡️ Secure • 📊 Comprehensive**
+**Fast • Accurate • Secure • Comprehensive**
 
 *Built for security professionals, by security professionals.*
