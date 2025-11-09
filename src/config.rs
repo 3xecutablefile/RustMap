@@ -3,19 +3,19 @@
 //! This module handles command-line argument parsing and configuration management
 //! for RustMap scanning operations. It provides a flexible configuration system
 //! that supports various scanning options and output formats.
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ```rust
 //! use rustmap::config::Config;
-//! 
+//!
 //! let config = Config::from_args(&[
 //!     "rustmap".to_string(),
 //!     "example.com".to_string(),
 //!     "-5k".to_string(),
 //!     "--json".to_string(),
 //! ])?;
-//! 
+//!
 //! assert_eq!(config.target, "example.com");
 //! assert_eq!(config.port_limit, 5000);
 //! assert!(config.json_mode);
@@ -29,13 +29,12 @@ use crate::metrics::MetricsConfig;
 use crate::rate_limit::RateLimitPolicy;
 use crate::retry::RetryConfig;
 use crate::validation;
+use atty;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 
 use std::time::Duration;
-
-/// Configuration for RustMap scanning operations
 /// 
 /// This struct contains all the parameters needed to configure a scan,
 /// including target specification, port ranges, timeouts, and output formats.
@@ -87,7 +86,11 @@ impl Config {
         // Parse port limit
         let port_limit = if args.iter().any(|arg| arg.starts_with('-') && arg.ends_with('k')) {
             Self::parse_port_limit_flag(args)?
+        } else if let Some(limit) = Self::parse_numeric_port_flag(args)? {
+            limit
         } else {
+            // Always prompt for port count when no port specification is given
+            // This provides better user experience
             Self::prompt_port_limit()?
         };
 
@@ -145,6 +148,43 @@ impl Config {
     }
 
 
+
+    /// Parse port limit from numeric flags (e.g., -1000 or --ports 1000)
+    fn parse_numeric_port_flag(args: &[String]) -> Result<Option<u16>> {
+        // Check for --ports flag
+        for (i, arg) in args.iter().enumerate() {
+            if arg == "--ports" {
+                if i + 1 >= args.len() {
+                    return Err(RustMapError::config("Missing port count value for --ports flag"));
+                }
+
+                let port_count = args[i + 1]
+                    .parse::<u16>()
+                    .map_err(|_| RustMapError::config(format!("Invalid port count: {}", args[i + 1])))?;
+
+                if port_count < 1 || port_count > 65535 {
+                    return Err(RustMapError::config("Port count must be between 1 and 65535"));
+                }
+
+                return Ok(Some(port_count));
+            }
+        }
+
+        // Check for direct numeric flags like -1000
+        for arg in args {
+            if arg.starts_with('-') && arg.len() > 1 {
+                // Check if it's a pure number after the dash
+                let num_str = &arg[1..];
+                if let Ok(num) = num_str.parse::<u16>() {
+                    if num >= 1 && num <= 65535 {
+                        return Ok(Some(num));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    }
 
     /// Parse port limit from -k flag (e.g., -5k for 5000 ports)
     fn parse_port_limit_flag(args: &[String]) -> Result<u16> {
@@ -223,7 +263,7 @@ impl Config {
         } else {
             0 // Auto-detect
         };
-        
+
         let shutdown_timeout = if let Ok(timeout) = std::env::var("RUSTMAP_SHUTDOWN_TIMEOUT") {
             let secs = timeout.parse::<u64>()
                 .map_err(|_| RustMapError::config("Invalid RUSTMAP_SHUTDOWN_TIMEOUT value"))?;
@@ -231,14 +271,14 @@ impl Config {
         } else {
             Duration::from_secs(30)
         };
-        
+
         let enable_rate_limiting = if let Ok(enabled) = std::env::var("RUSTMAP_ENABLE_RATE_LIMIT") {
             enabled.parse::<bool>()
                 .map_err(|_| RustMapError::config("Invalid RUSTMAP_ENABLE_RATE_LIMIT value"))?
         } else {
             true
         };
-        
+
         let scanner_rate_limit = RateLimitPolicy::new(
             std::env::var("RUSTMAP_SCANNER_RATE_LIMIT")
                 .unwrap_or_else(|_| "50".to_string())
@@ -246,7 +286,7 @@ impl Config {
                 .map_err(|_| RustMapError::config("Invalid RUSTMAP_SCANNER_RATE_LIMIT value"))?,
             Duration::from_secs(1),
         );
-        
+
         let external_tools_rate_limit = RateLimitPolicy::new(
             std::env::var("RUSTMAP_EXTERNAL_TOOLS_RATE_LIMIT")
                 .unwrap_or_else(|_| "5".to_string())
@@ -254,7 +294,7 @@ impl Config {
                 .map_err(|_| RustMapError::config("Invalid RUSTMAP_EXTERNAL_TOOLS_RATE_LIMIT value"))?,
             Duration::from_secs(1),
         );
-        
+
         let exploit_queries_rate_limit = RateLimitPolicy::new(
             std::env::var("RUSTMAP_EXPLOIT_QUERIES_RATE_LIMIT")
                 .unwrap_or_else(|_| "2".to_string())
@@ -262,15 +302,15 @@ impl Config {
                 .map_err(|_| RustMapError::config("Invalid RUSTMAP_EXPLOIT_QUERIES_RATE_LIMIT value"))?,
             Duration::from_secs(1),
         );
-        
+
         let logging = LogConfig::from_env()?;
         let metrics = MetricsConfig::from_env()?;
         let retry = RetryConfig::from_env()?;
-        
+
         Ok(Config {
             target: String::new(), // Will be set from command line
             json_mode: false,
-            port_limit: constants::ports::MAX,
+            port_limit: 1000, // Default to top 1000 ports instead of all
             scan_timeout: Duration::from_millis(constants::DEFAULT_SCAN_TIMEOUT_MS),
             exploit_timeout: Duration::from_secs(constants::DEFAULT_EXPLOIT_TIMEOUT_SECS),
             threads,

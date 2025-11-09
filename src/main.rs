@@ -6,7 +6,12 @@ mod constants;
 mod error;
 mod exploit;
 mod external;
+mod logging;
+mod metrics;
+mod rate_limit;
+mod retry;
 mod scanner;
+mod shutdown;
 mod utils;
 mod validation;
 
@@ -43,17 +48,27 @@ async fn main() {
 fn print_usage() {
     eprintln!(
         "{}",
-        "usage: rustmap <target> [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N]"
+        "usage: rustmap <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N]"
             .red()
             .bold()
     );
+    eprintln!("Port Options:");
+    eprintln!("  -Nk                 Scan N*1000 ports (e.g., -1k=1000, -5k=5000, -30k=30000)");
+    eprintln!("  -N                  Scan N ports directly (e.g., -1000, -5000)");
+    eprintln!("  --ports N           Scan N ports (e.g., --ports 1000)");
+    eprintln!("  (no flag)           Scan top 1000 ports (most common)");
+    eprintln!("Other Options:");
     eprintln!("  --json              Output in JSON format");
     eprintln!("  --scan-timeout MS   TCP connection timeout in milliseconds (default: 25)");
     eprintln!("  --exploit-timeout MS Exploit search timeout in milliseconds (default: 10000)");
     eprintln!("  --threads N         Number of threads to use (default: all cores)");
     eprintln!("Examples:");
-    eprintln!("  rustmap 127.0.0.1                    # Scan all ports");
+    eprintln!("  rustmap 127.0.0.1                    # Scan top 1000 ports");
+    eprintln!("  rustmap example.com -1k              # Scan top 1000 ports");
     eprintln!("  rustmap example.com -5k              # Scan top 5000 ports");
+    eprintln!("  rustmap example.com -500             # Scan first 500 ports");
+    eprintln!("  rustmap example.com --ports 1000     # Scan 1000 ports");
+    eprintln!("  rustmap example.com -65535           # Scan all ports");
     eprintln!("  rustmap 192.168.1.1 --json          # Output in JSON format");
 }
 

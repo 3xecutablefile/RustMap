@@ -172,21 +172,18 @@ impl RateLimiter {
             return false;
         }
         
-        // Get or create per-target limiter
-        let target_limiter = self.target_limiters
+        // Get or create per-target limiter  
+        let entry = self.target_limiters
             .entry(target.to_string())
-            .or_try_insert_with(|| {
-                let quota = self.policy.to_quota()?;
-                Ok(Arc::new(GovernorRateLimiter::direct(quota)))
-            })
-            .unwrap_or_else(|_| {
-                // Fallback to global limiter if per-target creation fails
-                drop(entry);
-                return self.global_limiter.check();
+            .or_insert_with(|| {
+                let quota = self.policy.to_quota().unwrap_or_else(|_| {
+                    Quota::per_second(std::num::NonZeroU32::new(10).unwrap())
+                });
+                Arc::new(GovernorRateLimiter::direct(quota))
             });
-        
+
         // Check per-target rate limit
-        if !target_limiter.check().is_ok() {
+        if !entry.check().is_ok() {
             debug!("Rate limit exceeded for target: {}", target);
             return false;
         }

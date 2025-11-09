@@ -77,7 +77,7 @@ impl std::fmt::Display for ShutdownSignal {
 }
 
 /// Cleanup task that runs during shutdown
-pub type CleanupTask = Box<dyn std::future::Future<Output = Result<()>> + Send + 'static>;
+pub type CleanupTask = std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'static>>;
 
 /// Manages graceful shutdown operations
 #[derive(Debug)]
@@ -202,7 +202,7 @@ impl ShutdownManager {
                 task_count += 1;
                 debug!("Executing cleanup task {}/?", task_count);
                 
-                match Box::pin(task).await {
+                match task.await {
                     Ok(_) => debug!("Cleanup task {} completed successfully", task_count),
                     Err(e) => warn!("Cleanup task {} failed: {}", task_count, e),
                 }

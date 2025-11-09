@@ -461,11 +461,13 @@ mod tests {
         let config = RetryConfig::new(3, Duration::from_millis(10), Duration::from_millis(100));
         let executor = RetryExecutor::new(config);
         
-let result = executor.execute_with_retry(
+        let call_count = std::sync::atomic::AtomicU32::new(0);
+        let result = executor.execute_with_retry(
             || {
                 Box::pin(async move {
-                    call_count += 1;
-                    if call_count < 3 {
+                    call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    let current = call_count.load(std::sync::atomic::Ordering::SeqCst);
+                    if current < 3 {
                         Err(RustMapError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
                     } else {
                         Ok("success")
@@ -484,8 +486,8 @@ let result = executor.execute_with_retry(
         let config = RetryConfig::new(3, Duration::from_millis(10), Duration::from_millis(100));
         let executor = RetryExecutor::new(config);
         
-let call_count = std::sync::atomic::AtomicU32::new(0);
-let result = executor.execute_with_retry(
+        let call_count = std::sync::atomic::AtomicU32::new(0);
+        let result = executor.execute_with_retry::<_, String, _>(
             || {
                 Box::pin(async move {
                     call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -502,7 +504,7 @@ let result = executor.execute_with_retry(
         
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success");
-        assert_eq!(call_count, 3);
+        assert_eq!(call_count.load(std::sync::atomic::Ordering::SeqCst), 3);
     }
     
     #[tokio::test]
@@ -511,11 +513,16 @@ let result = executor.execute_with_retry(
         let executor = RetryExecutor::new(config);
         
         let call_count = std::sync::atomic::AtomicU32::new(0);
-        let result = executor.execute_with_retry(
+        let result = executor.execute_with_retry::<_, String, _>(
             || {
                 Box::pin(async move {
                     call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                    Err(RustMapError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
+                    let current = call_count.load(std::sync::atomic::Ordering::SeqCst);
+                    if current < 3 {
+                        Err(RustMapError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
+                    } else {
+                        Ok("success".to_string())
+                    }
                 })
             },
             RetryPolicy::Standard,
