@@ -15,26 +15,7 @@ RustMap is a high-performance network security tool that quickly scans ports and
 - 💥 **Comprehensive** - Automatic exploit database integration
 - 🛡️ **Safe** - Built-in rate limiting and error handling
 - 📊 **Professional** - Clean output and JSON export
-
-## 🚀 Quick Start (30 seconds)
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/3xecutablefile/RustMap.git
-cd RustMap
-
-# 2. Run the installation script
-chmod +x install.sh
-./install.sh
-
-# 3. Start scanning!
-rustmap scanme.nmap.org -1k
-```
-
-**That's it!** 🎉 You're ready to scan networks and find exploits.
-
-## 📖 Table of Contents
-
+- 
 1. [Installation](#-installation)
 2. [Basic Usage](#-basic-usage)
 3. [Common Examples](#-common-examples)
