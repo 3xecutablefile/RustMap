@@ -1,0 +1,151 @@
+// rustmap - fast port scanner and exploit finder written in Rust
+// made by: 3xecutablefile
+
+mod config;
+mod constants;
+mod error;
+mod exploit;
+mod external;
+mod scanner;
+mod utils;
+mod validation;
+
+use colored::*;
+use error::{RustMapError, Result};
+use std::env;
+use std::process;
+
+/// Application entry point
+#[tokio::main]
+async fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        print_usage();
+        process::exit(1);
+    }
+
+    let config = match config::Config::from_args(&args) {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            eprintln!("{} {}", "✗".red().bold(), e);
+            process::exit(1);
+        }
+    };
+
+    if let Err(e) = run(config).await {
+        eprintln!("{} {}", "✗".red().bold(), e);
+        process::exit(1);
+    }
+}
+
+/// Print usage information
+fn print_usage() {
+    eprintln!(
+        "{}",
+        "usage: rustmap <target> [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N]"
+            .red()
+            .bold()
+    );
+    eprintln!("  --json              Output in JSON format");
+    eprintln!("  --scan-timeout MS   TCP connection timeout in milliseconds (default: 25)");
+    eprintln!("  --exploit-timeout MS Exploit search timeout in milliseconds (default: 10000)");
+    eprintln!("  --threads N         Number of threads to use (default: all cores)");
+    eprintln!("Examples:");
+    eprintln!("  rustmap 127.0.0.1                    # Scan all ports");
+    eprintln!("  rustmap example.com -5k              # Scan top 5000 ports");
+    eprintln!("  rustmap 192.168.1.1 --json          # Output in JSON format");
+}
+
+/// Main application logic
+async fn run(config: config::Config) -> Result<()> {
+    // Check dependencies
+    utils::check_dependencies()?;
+
+    // Resolve target
+    let target_addrs = utils::resolve_target(&config.target)?;
+
+    if !config.json_mode {
+        print_scan_start(&config);
+    }
+
+    // Scan ports
+    let open_ports = scanner::fast_scan(&target_addrs, &config).await?;
+
+    if open_ports.is_empty() {
+        if !config.json_mode {
+            println!("{} No open ports found", "⚠".yellow());
+        }
+        return Ok(());
+    }
+
+    // Detect services
+    let ports = scanner::detect_services(&config.target, &open_ports, &config).await?;
+
+    if ports.is_empty() {
+        if !config.json_mode {
+            println!("{} No services detected", "⚠".yellow());
+        }
+        return Ok(());
+    }
+
+    // Search exploits
+    let results = exploit::search_exploits(&ports, &config).await?;
+
+    // Output results
+    output_results(&results, &ports, &config)?;
+
+    Ok(())
+}
+
+/// Print scan start message
+fn print_scan_start(config: &config::Config) {
+    println!(
+        "{} Fast scanning {} ports on {}...",
+        "⚡".bright_yellow(),
+        if config.port_limit == constants::ports::MAX {
+            "all".to_string()
+        } else {
+            format!("top {}", config.port_limit)
+        },
+        config.target
+    );
+}
+
+/// Output results in appropriate format
+fn output_results(
+    results: &[exploit::PortResult],
+    ports: &[scanner::Port],
+    config: &config::Config,
+) -> Result<()> {
+    if config.json_mode {
+        let json_output = serde_json::to_string_pretty(results)
+            .map_err(|e| RustMapError::parse(format!("Failed to serialize JSON: {}", e)))?;
+        println!("{}", json_output);
+    } else {
+        exploit::print_results(results, ports);
+    }
+    
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_print_usage_doesnt_panic() {
+        print_usage();
+    }
+    
+    #[test]
+    fn test_print_scan_start() {
+        let config = config::Config::from_args(&[
+            "rustmap".to_string(),
+            "127.0.0.1".to_string(),
+            "-5k".to_string(),
+        ]).unwrap();
+        
+        print_scan_start(&config);
+    }
+}
