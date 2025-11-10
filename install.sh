@@ -7,6 +7,10 @@
 
 set -e  # Exit on any error
 
+# Track if we're in a git repository for cleanup purposes
+REPO_PATH=$(pwd)
+REPO_NAME=$(basename "$REPO_PATH")
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -221,18 +225,22 @@ fi
 
 # Verify installation
 print_info "Verifying installation..."
+INSTALLATION_SUCCESS=false
+
 if command_exists rustmap; then
     RUSTMAP_VERSION=$(rustmap --help 2>/dev/null | head -n 1 || echo "version unknown")
     print_success "RustMap installed successfully!"
     print_info "Version: $RUSTMAP_VERSION"
+    INSTALLATION_SUCCESS=true
 else
     # Try local binary
     if [ -f "target/release/rustmap" ]; then
         print_success "RustMap built successfully (local binary: target/release/rustmap)"
         print_info "Add $(pwd)/target/release to your PATH or copy the binary to a directory in PATH"
+        INSTALLATION_SUCCESS=true
     else
         print_error "RustMap installation verification failed"
-        exit 1
+        INSTALLATION_SUCCESS=false
     fi
 fi
 
@@ -259,6 +267,24 @@ echo -e "\n${YELLOW}Requirements Check:${NC}"
 echo -n "  Nmap: "; command_exists nmap && print_success "✓" || print_error "✗"
 echo -n "  Searchsploit: "; command_exists searchsploit && print_success "✓" || print_warning "✗ (limited functionality)"
 echo -n "  RustMap: "; command_exists rustmap && print_success "✓" || print_success "✓ (local binary)"
+
+# Auto-cleanup: only if installation was successful
+if [ "$INSTALLATION_SUCCESS" = true ]; then
+    echo -e "\n${BLUE}Auto-cleanup:${NC}"
+    print_info "Cleaning up source repository..."
+    cd ..
+    if rm -rf "$REPO_NAME"; then
+        print_success "Repository deleted successfully"
+        print_info "RustMap will continue to work from system PATH"
+        print_info "Current directory is now: $(pwd)"
+    else
+        print_warning "Could not delete repository (permission issue)"
+        print_info "You can manually delete it with: rm -rf $REPO_NAME"
+    fi
+else
+    print_warning "Installation did not complete successfully - repository not deleted"
+    print_info "Please check the errors above and try again if needed"
+fi
 
 print_info "For more information, check the README.md file"
 print_info "Made by: 3xecutablefile"
