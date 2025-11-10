@@ -29,7 +29,6 @@ use crate::metrics::MetricsConfig;
 use crate::rate_limit::RateLimitPolicy;
 use crate::retry::RetryConfig;
 use crate::validation;
-use atty;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
