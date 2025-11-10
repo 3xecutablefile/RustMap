@@ -15,14 +15,14 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::scanner::{fast_scan, Port};
-//! use rustmap::config::Config;
-//! use rustmap::utils::resolve_target;
+//! use oxidescanner::scanner::{fast_scan, Port};
+//! use oxidescanner::config::Config;
+//! use oxidescanner::utils::resolve_target;
 //! 
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let config = Config::from_args(&[
-//!         "rustmap".to_string(),
+//!         "oxidescanner".to_string(),
 //!         "127.0.0.1".to_string(),
 //!         "-1k".to_string(),
 //!     ])?;
@@ -40,7 +40,7 @@
 
 use crate::config::Config;
 use crate::constants;
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use crate::external::nmap::NmapDetector;
 use crate::utils;
 use colored::*;
@@ -179,14 +179,14 @@ impl ProgressReporter {
 /// # Example
 /// 
 /// ```rust
-/// use rustmap::scanner::fast_scan;
-/// use rustmap::config::Config;
+/// use oxidescanner::scanner::fast_scan;
+/// use oxidescanner::config::Config;
 /// use std::net::SocketAddr;
 /// 
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let config = Config::from_args(&[
-///         "rustmap".to_string(),
+///         "oxidescanner".to_string(),
 ///         "127.0.0.1".to_string(),
 ///         "-1k".to_string(),
 ///     ])?;
@@ -265,13 +265,13 @@ pub async fn fast_scan(target_addrs: &[SocketAddr], config: &Config) -> Result<V
 /// # Example
 /// 
 /// ```rust
-/// use rustmap::scanner::{detect_services, Port};
-/// use rustmap::config::Config;
+/// use oxidescanner::scanner::{detect_services, Port};
+/// use oxidescanner::config::Config;
 /// 
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let config = Config::from_args(&[
-///         "rustmap".to_string(),
+///         "oxidescanner".to_string(),
 ///         "127.0.0.1".to_string(),
 ///         "-1k".to_string(),
 ///     ])?;
@@ -294,7 +294,7 @@ pub async fn detect_services(target: &str, ports: &[Port], config: &Config) -> R
     }
     
     let nmap_detector = NmapDetector::new()
-        .map_err(|e| RustMapError::service_detection(format!("Failed to initialize nmap: {}", e)))?;
+        .map_err(|e| OxideScannerError::service_detection(format!("Failed to initialize nmap: {}", e)))?;
     
     let port_numbers: Vec<u16> = ports.iter().map(|p| p.port).collect();
     let timeout = Some(Duration::from_secs(constants::NMAP_TIMEOUT_SECS));
@@ -302,7 +302,7 @@ pub async fn detect_services(target: &str, ports: &[Port], config: &Config) -> R
     let nmap_services = nmap_detector
         .detect_services(target, &port_numbers, timeout)
         .await
-        .map_err(|e| RustMapError::service_detection(format!("Service detection failed: {}", e)))?;
+        .map_err(|e| OxideScannerError::service_detection(format!("Service detection failed: {}", e)))?;
     
     // Convert nmap services to our Port format
     let mut detected_ports: Vec<Port> = nmap_services

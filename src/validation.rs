@@ -16,7 +16,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::validation::{validate_target, validate_port_limit, sanitize_command_input};
+//! use oxidescanner::validation::{validate_target, validate_port_limit, sanitize_command_input};
 //! 
 //! // Validate targets
 //! assert!(validate_target("example.com").is_ok());
@@ -34,7 +34,7 @@
 //! ```
 
 use crate::constants;
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use regex::Regex;
 use std::net::IpAddr;
 
@@ -55,11 +55,11 @@ lazy_static::lazy_static! {
 /// original string if valid, or an error if invalid.
 pub fn validate_target(target: &str) -> Result<String> {
     if target.is_empty() {
-        return Err(RustMapError::validation("Target cannot be empty"));
+        return Err(OxideScannerError::validation("Target cannot be empty"));
     }
     
     if target.len() > constants::validation::MAX_TARGET_LENGTH {
-        return Err(RustMapError::validation("Target too long"));
+        return Err(OxideScannerError::validation("Target too long"));
     }
     
     // Check if it's a valid IP address
@@ -69,7 +69,7 @@ pub fn validate_target(target: &str) -> Result<String> {
     
     // Check if it's a valid hostname
     if !HOSTNAME_REGEX.is_match(target) {
-        return Err(RustMapError::validation("Invalid hostname or IP address"));
+        return Err(OxideScannerError::validation("Invalid hostname or IP address"));
     }
     
     Ok(target.to_string())
@@ -78,14 +78,14 @@ pub fn validate_target(target: &str) -> Result<String> {
 /// Validates port limit value
 pub fn validate_port_limit(limit: u16) -> Result<u16> {
     if limit == 0 {
-        return Err(RustMapError::validation("Port limit must be greater than 0"));
+        return Err(OxideScannerError::validation("Port limit must be greater than 0"));
     }
     
     // Since MAX is the maximum value for u16, no upper bound check needed
     // This validation is kept for future type changes or different limits
     #[allow(clippy::absurd_extreme_comparisons)]
     if limit > constants::ports::MAX {
-        return Err(RustMapError::validation(format!(
+        return Err(OxideScannerError::validation(format!(
             "Port limit cannot exceed {}",
             constants::ports::MAX
         )));
@@ -99,11 +99,11 @@ pub fn validate_port_limit(limit: u16) -> Result<u16> {
 /// Validates timeout values
 pub fn validate_timeout_ms(timeout_ms: u64) -> Result<u64> {
     if timeout_ms == 0 {
-        return Err(RustMapError::validation("Timeout must be greater than 0"));
+        return Err(OxideScannerError::validation("Timeout must be greater than 0"));
     }
     
     if timeout_ms > 300_000 {
-        return Err(RustMapError::validation("Timeout cannot exceed 5 minutes"));
+        return Err(OxideScannerError::validation("Timeout cannot exceed 5 minutes"));
     }
     
     Ok(timeout_ms)
@@ -114,7 +114,7 @@ pub fn validate_timeout_ms(timeout_ms: u64) -> Result<u64> {
 /// Sanitizes input for safe command execution
 pub fn sanitize_command_input(input: &str) -> Result<String> {
     if input.is_empty() {
-        return Err(RustMapError::validation("Command input cannot be empty"));
+        return Err(OxideScannerError::validation("Command input cannot be empty"));
     }
     
     // Remove potentially dangerous characters
@@ -126,7 +126,7 @@ pub fn sanitize_command_input(input: &str) -> Result<String> {
         .to_string();
     
     if sanitized.is_empty() {
-        return Err(RustMapError::validation("Invalid command input"));
+        return Err(OxideScannerError::validation("Invalid command input"));
     }
     
     Ok(sanitized)
@@ -135,7 +135,7 @@ pub fn sanitize_command_input(input: &str) -> Result<String> {
 /// Validates port list format for nmap
 pub fn validate_port_list(port_list: &str) -> Result<String> {
     if port_list.is_empty() {
-        return Err(RustMapError::validation("Port list cannot be empty"));
+        return Err(OxideScannerError::validation("Port list cannot be empty"));
     }
     
     // Check for valid port ranges and individual ports
@@ -149,24 +149,24 @@ pub fn validate_port_list(port_list: &str) -> Result<String> {
             // Port range
             let range_parts: Vec<&str> = part.split('-').collect();
             if range_parts.len() != 2 {
-                return Err(RustMapError::validation("Invalid port range format"));
+                return Err(OxideScannerError::validation("Invalid port range format"));
             }
             
             let start: u16 = range_parts[0]
                 .parse()
-                .map_err(|_| RustMapError::validation("Invalid port number"))?;
+                .map_err(|_| OxideScannerError::validation("Invalid port number"))?;
             let end: u16 = range_parts[1]
                 .parse()
-                .map_err(|_| RustMapError::validation("Invalid port number"))?;
+                .map_err(|_| OxideScannerError::validation("Invalid port number"))?;
             
             if start > end {
-                return Err(RustMapError::validation("Invalid port range: start > end"));
+                return Err(OxideScannerError::validation("Invalid port range: start > end"));
             }
         } else {
             // Single port
             let _: u16 = part
                 .parse()
-                .map_err(|_| RustMapError::validation("Invalid port number"))?;
+                .map_err(|_| OxideScannerError::validation("Invalid port number"))?;
         }
     }
     
@@ -176,11 +176,11 @@ pub fn validate_port_list(port_list: &str) -> Result<String> {
 /// Validates search query for exploit database
 pub fn validate_search_query(query: &str) -> Result<String> {
     if query.is_empty() {
-        return Err(RustMapError::validation("Search query cannot be empty"));
+        return Err(OxideScannerError::validation("Search query cannot be empty"));
     }
     
     if query.len() > 200 {
-        return Err(RustMapError::validation("Search query too long"));
+        return Err(OxideScannerError::validation("Search query too long"));
     }
     
     // Remove potentially dangerous characters for shell commands

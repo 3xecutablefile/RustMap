@@ -1,6 +1,6 @@
-//! # RustMap - Fast Port Scanner and Exploit Finder
+//! # OxideScanner - Fast Port Scanner and Exploit Finder
 //! 
-//! RustMap is a high-performance network security tool written in Rust that combines
+//! OxideScanner is a high-performance network security tool written in Rust that combines
 //! fast TCP port scanning with automatic exploit database lookups. It provides
 //! parallel scanning capabilities, service detection, and risk assessment.
 //! 
@@ -15,14 +15,14 @@
 //! ## Quick Start
 //! 
 //! ```rust
-//! use rustmap::config::Config;
-//! use rustmap::scanner::fast_scan;
-//! use rustmap::utils::resolve_target;
+//! use oxidescanner::config::Config;
+//! use oxidescanner::scanner::fast_scan;
+//! use oxidescanner::utils::resolve_target;
 //! 
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let config = Config::from_args(&[
-//!         "rustmap".to_string(),
+//!         "oxscan".to_string(),
 //!         "127.0.0.1".to_string(),
 //!         "-1k".to_string(),
 //!     ])?;

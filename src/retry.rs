@@ -16,7 +16,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::retry::{RetryConfig, RetryPolicy, RetryExecutor};
+//! use oxidescanner::retry::{RetryConfig, RetryPolicy, RetryExecutor};
 //! use std::time::Duration;
 //! 
 //! let config = RetryConfig::default();
@@ -31,7 +31,7 @@
 //! ).await?;
 //! ```
 
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use rand::Rng;
 use std::future::Future;
 use std::pin::Pin;
@@ -70,14 +70,14 @@ impl RetryConfig {
     pub fn from_env() -> Result<Self> {
         let max_retries = if let Ok(retries) = std::env::var("RUSTMAP_RETRY_MAX") {
             retries.parse::<u32>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_RETRY_MAX value"))?
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_RETRY_MAX value"))?
         } else {
             3
         };
         
         let base_delay = if let Ok(delay) = std::env::var("RUSTMAP_RETRY_BASE_DELAY") {
             let ms = delay.parse::<u64>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_RETRY_BASE_DELAY value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_RETRY_BASE_DELAY value"))?;
             Duration::from_millis(ms)
         } else {
             Duration::from_millis(1000)
@@ -85,7 +85,7 @@ impl RetryConfig {
         
         let max_delay = if let Ok(delay) = std::env::var("RUSTMAP_RETRY_MAX_DELAY") {
             let ms = delay.parse::<u64>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_RETRY_MAX_DELAY value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_RETRY_MAX_DELAY value"))?;
             Duration::from_millis(ms)
         } else {
             Duration::from_millis(30000)
@@ -93,7 +93,7 @@ impl RetryConfig {
         
         let backoff_multiplier = if let Ok(multiplier) = std::env::var("RUSTMAP_RETRY_BACKOFF_MULTIPLIER") {
             multiplier.parse::<f64>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_RETRY_BACKOFF_MULTIPLIER value"))?
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_RETRY_BACKOFF_MULTIPLIER value"))?
         } else {
             2.0
         };
@@ -208,7 +208,7 @@ impl Default for RetryPolicy {
 /// Retry condition evaluator
 pub trait RetryCondition: Send + Sync {
     /// Determine if the operation should be retried based on the error
-    fn should_retry(&self, error: &RustMapError, attempt: u32) -> bool;
+    fn should_retry(&self, error: &OxideScannerError, attempt: u32) -> bool;
 }
 
 /// Default retry condition that retries on most errors
@@ -216,20 +216,20 @@ pub trait RetryCondition: Send + Sync {
 pub struct DefaultRetryCondition;
 
 impl RetryCondition for DefaultRetryCondition {
-    fn should_retry(&self, error: &RustMapError, attempt: u32) -> bool {
+    fn should_retry(&self, error: &OxideScannerError, attempt: u32) -> bool {
         match error {
             // Don't retry on configuration errors
-            RustMapError::Config(_) => false,
-            RustMapError::Validation(_) => false,
-            RustMapError::Parse(_) => false,
+            OxideScannerError::Config(_) => false,
+            OxideScannerError::Validation(_) => false,
+            OxideScannerError::Parse(_) => false,
             
             // Retry on network and timeout errors
-            RustMapError::Io(_) => true,
-            RustMapError::Timeout { .. } => true,
-            RustMapError::ExternalTool { .. } => true,
-            RustMapError::ServiceDetection(_) => true,
-            RustMapError::ExploitSearch(_) => true,
-            RustMapError::TargetResolution(_) => true,
+            OxideScannerError::Io(_) => true,
+            OxideScannerError::Timeout { .. } => true,
+            OxideScannerError::ExternalTool { .. } => true,
+            OxideScannerError::ServiceDetection(_) => true,
+            OxideScannerError::ExploitSearch(_) => true,
+            OxideScannerError::TargetResolution(_) => true,
         }
     }
 }
@@ -239,12 +239,12 @@ impl RetryCondition for DefaultRetryCondition {
 pub struct ExternalToolRetryCondition;
 
 impl RetryCondition for ExternalToolRetryCondition {
-    fn should_retry(&self, error: &RustMapError, attempt: u32) -> bool {
+    fn should_retry(&self, error: &OxideScannerError, attempt: u32) -> bool {
         match error {
             // Retry on external tool failures and timeouts
-            RustMapError::ExternalTool { .. } => true,
-            RustMapError::Timeout { .. } => true,
-            RustMapError::Io(_) => true,
+            OxideScannerError::ExternalTool { .. } => true,
+            OxideScannerError::Timeout { .. } => true,
+            OxideScannerError::Io(_) => true,
             
             // Don't retry on other errors
             _ => false,
@@ -257,12 +257,12 @@ impl RetryCondition for ExternalToolRetryCondition {
 pub struct NetworkRetryCondition;
 
 impl RetryCondition for NetworkRetryCondition {
-    fn should_retry(&self, error: &RustMapError, attempt: u32) -> bool {
+    fn should_retry(&self, error: &OxideScannerError, attempt: u32) -> bool {
         match error {
             // Retry on network-related errors
-            RustMapError::Io(_) => true,
-            RustMapError::Timeout { .. } => true,
-            RustMapError::TargetResolution(_) => true,
+            OxideScannerError::Io(_) => true,
+            OxideScannerError::Timeout { .. } => true,
+            OxideScannerError::TargetResolution(_) => true,
             
             // Don't retry on other errors
             _ => false,
@@ -295,7 +295,7 @@ impl RetryExecutor {
     ) -> Result<T>
     where
         F: Fn() -> Pin<Box<dyn Future<Output = Result<T>> + Send>>,
-        E: Into<RustMapError>,
+        E: Into<OxideScannerError>,
     {
         let config = policy.config();
         let condition = DefaultRetryCondition;
@@ -448,11 +448,11 @@ mod tests {
         let condition = DefaultRetryCondition;
         
         // Should retry on IO errors
-        let io_error = RustMapError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout"));
+        let io_error = OxideScannerError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout"));
         assert!(condition.should_retry(&io_error, 1));
         
         // Should not retry on config errors
-        let config_error = RustMapError::config("invalid config");
+        let config_error = OxideScannerError::config("invalid config");
         assert!(!condition.should_retry(&config_error, 1));
     }
     
@@ -468,7 +468,7 @@ mod tests {
                     call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     let current = call_count.load(std::sync::atomic::Ordering::SeqCst);
                     if current < 3 {
-                        Err(RustMapError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
+                        Err(OxideScannerError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
                     } else {
                         Ok("success")
                     }
@@ -493,7 +493,7 @@ mod tests {
                     call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     let current = call_count.load(std::sync::atomic::Ordering::SeqCst);
                     if current < 3 {
-                        Err(RustMapError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
+                        Err(OxideScannerError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
                     } else {
                         Ok("success")
                     }
@@ -519,7 +519,7 @@ mod tests {
                     call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     let current = call_count.load(std::sync::atomic::Ordering::SeqCst);
                     if current < 3 {
-                        Err(RustMapError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
+                        Err(OxideScannerError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout")))
                     } else {
                         Ok("success".to_string())
                     }

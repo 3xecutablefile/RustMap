@@ -1,7 +1,7 @@
 
 //! # Error Handling
 //! 
-//! This module provides comprehensive error handling for RustMap operations
+//! This module provides comprehensive error handling for OxideScanner operations
 //! with custom error types that cover various failure scenarios. It uses the
 //! `thiserror` crate for clean error definitions and improved error messages.
 //! 
@@ -16,14 +16,14 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::error::{RustMapError, Result};
+//! use oxidescanner::error::{OxideScannerError, Result};
 //! 
 //! fn validate_port(port: u16) -> Result<()> {
 //!     if port == 0 {
-//!         return Err(RustMapError::validation("Port cannot be 0"));
+//!         return Err(OxideScannerError::validation("Port cannot be 0"));
 //!     }
 //!     if port > 65535 {
-//!         return Err(RustMapError::validation("Port cannot exceed 65535"));
+//!         return Err(OxideScannerError::validation("Port cannot exceed 65535"));
 //!     }
 //!     Ok(())
 //! }
@@ -36,13 +36,13 @@
 
 use std::io;
 
-/// Custom error types for RustMap operations
+/// Custom error types for OxideScanner operations
 /// 
 /// This enum represents all possible error conditions that can occur during
-/// RustMap operations, providing specific error types for different scenarios
+/// OxideScanner operations, providing specific error types for different scenarios
 /// like configuration errors, network issues, and external tool failures.
 #[derive(Debug, thiserror::Error)]
-pub enum RustMapError {
+pub enum OxideScannerError {
     #[error("Configuration error: {0}")]
     Config(String),
     
@@ -73,7 +73,7 @@ pub enum RustMapError {
     TargetResolution(String),
 }
 
-impl RustMapError {
+impl OxideScannerError {
     /// Create a new configuration error
     pub fn config(msg: impl Into<String>) -> Self {
         Self::Config(msg.into())
@@ -120,5 +120,5 @@ impl RustMapError {
     }
 }
 
-/// Result type alias for RustMap operations
-pub type Result<T> = std::result::Result<T, RustMapError>;
+/// Result type alias for OxideScanner operations
+pub type Result<T> = std::result::Result<T, OxideScannerError>;

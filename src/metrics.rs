@@ -1,7 +1,7 @@
 //! # Metrics and Telemetry Module
 //! 
 //! This module provides comprehensive metrics collection and telemetry capabilities
-//! for RustMap, including Prometheus export, performance tracking, and operational
+//! for OxideScanner, including Prometheus export, performance tracking, and operational
 //! monitoring. It uses the metrics crate for efficient metric collection.
 //! 
 //! ## Features
@@ -16,7 +16,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::metrics::{MetricsCollector, MetricsConfig};
+//! use oxidescanner::metrics::{MetricsCollector, MetricsConfig};
 //! use std::time::Duration;
 //! 
 //! let config = MetricsConfig::default();
@@ -31,7 +31,7 @@
 //! let prometheus_output = metrics.export_prometheus();
 //! ```
 
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -65,21 +65,21 @@ impl MetricsConfig {
     pub fn from_env() -> Result<Self> {
         let enabled = if let Ok(enabled) = std::env::var("RUSTMAP_METRICS_ENABLED") {
             enabled.parse::<bool>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_METRICS_ENABLED value"))?
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_METRICS_ENABLED value"))?
         } else {
             false
         };
         
         let prometheus_port = if let Ok(port) = std::env::var("RUSTMAP_METRICS_PORT") {
             port.parse::<u16>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_METRICS_PORT value"))?
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_METRICS_PORT value"))?
         } else {
             9090
         };
         
         let export_interval = if let Ok(interval) = std::env::var("RUSTMAP_METRICS_INTERVAL") {
             let secs = interval.parse::<u64>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_METRICS_INTERVAL value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_METRICS_INTERVAL value"))?;
             Duration::from_secs(secs)
         } else {
             Duration::from_secs(30)
@@ -206,7 +206,7 @@ impl MetricsCollector {
         let mut metrics = self.metrics.write().await;
         
         if metrics.contains_key(name) {
-            return Err(RustMapError::config(format!("Metric '{}' already registered", name)));
+            return Err(OxideScannerError::config(format!("Metric '{}' already registered", name)));
         }
         
         let initial_value = match metric_type {
@@ -247,10 +247,10 @@ impl MetricsCollector {
             if let MetricValue::Counter(value) = metric {
                 *value += 1;
             } else {
-                return Err(RustMapError::config(format!("Metric '{}' is not a counter", name)));
+                return Err(OxideScannerError::config(format!("Metric '{}' is not a counter", name)));
             }
         } else {
-            return Err(RustMapError::config(format!("Metric '{}' not found", name)));
+            return Err(OxideScannerError::config(format!("Metric '{}' not found", name)));
         }
         
         Ok(())
@@ -267,10 +267,10 @@ impl MetricsCollector {
             if let MetricValue::Counter(current) = metric {
                 *current += value;
             } else {
-                return Err(RustMapError::config(format!("Metric '{}' is not a counter", name)));
+                return Err(OxideScannerError::config(format!("Metric '{}' is not a counter", name)));
             }
         } else {
-            return Err(RustMapError::config(format!("Metric '{}' not found", name)));
+            return Err(OxideScannerError::config(format!("Metric '{}' not found", name)));
         }
         
         Ok(())
@@ -287,10 +287,10 @@ impl MetricsCollector {
             if let MetricValue::Gauge(_) = metric {
                 *metric = MetricValue::Gauge(value);
             } else {
-                return Err(RustMapError::config(format!("Metric '{}' is not a gauge", name)));
+                return Err(OxideScannerError::config(format!("Metric '{}' is not a gauge", name)));
             }
         } else {
-            return Err(RustMapError::config(format!("Metric '{}' not found", name)));
+            return Err(OxideScannerError::config(format!("Metric '{}' not found", name)));
         }
         
         Ok(())
@@ -322,10 +322,10 @@ impl MetricsCollector {
                 // Update +Inf bucket
                 *buckets.entry("le_+Inf".to_string()).or_insert(0) += 1;
             } else {
-                return Err(RustMapError::config(format!("Metric '{}' is not a histogram", name)));
+                return Err(OxideScannerError::config(format!("Metric '{}' is not a histogram", name)));
             }
         } else {
-            return Err(RustMapError::config(format!("Metric '{}' not found", name)));
+            return Err(OxideScannerError::config(format!("Metric '{}' not found", name)));
         }
         
         Ok(())
@@ -349,7 +349,7 @@ impl MetricsCollector {
         let mut output = String::new();
         
         // Add metadata
-        output.push_str("# Generated by RustMap\n");
+        output.push_str("# Generated by OxideScanner\n");
         output.push_str(&format!("# Collection time: {}\n", collected.timestamp));
         output.push_str("\n");
         
@@ -379,16 +379,16 @@ impl MetricsCollector {
         
         // Export system metrics
         output.push_str("# System metrics\n");
-        output.push_str(&format!("# TYPE rustmap_cpu_usage gauge\n"));
-        output.push_str(&format!("rustmap_cpu_usage {}\n", collected.system_metrics.cpu_usage));
-        output.push_str(&format!("# TYPE rustmap_memory_bytes gauge\n"));
-        output.push_str(&format!("rustmap_memory_bytes {}\n", collected.system_metrics.memory_usage));
-        output.push_str(&format!("# TYPE rustmap_memory_percent gauge\n"));
-        output.push_str(&format!("rustmap_memory_percent {}\n", collected.system_metrics.memory_usage_percent));
-        output.push_str(&format!("# TYPE rustmap_threads gauge\n"));
-        output.push_str(&format!("rustmap_threads {}\n", collected.system_metrics.thread_count));
-        output.push_str(&format!("# TYPE rustmap_open_fds gauge\n"));
-        output.push_str(&format!("rustmap_open_fds {}\n", collected.system_metrics.open_fds));
+        output.push_str(&format!("# TYPE oxidescanner_cpu_usage gauge\n"));
+        output.push_str(&format!("oxidescanner_cpu_usage {}\n", collected.system_metrics.cpu_usage));
+        output.push_str(&format!("# TYPE oxidescanner_memory_bytes gauge\n"));
+        output.push_str(&format!("oxidescanner_memory_bytes {}\n", collected.system_metrics.memory_usage));
+        output.push_str(&format!("# TYPE oxidescanner_memory_percent gauge\n"));
+        output.push_str(&format!("oxidescanner_memory_percent {}\n", collected.system_metrics.memory_usage_percent));
+        output.push_str(&format!("# TYPE oxidescanner_threads gauge\n"));
+        output.push_str(&format!("oxidescanner_threads {}\n", collected.system_metrics.thread_count));
+        output.push_str(&format!("# TYPE oxidescanner_open_fds gauge\n"));
+        output.push_str(&format!("oxidescanner_open_fds {}\n", collected.system_metrics.open_fds));
         
         Ok(output)
     }

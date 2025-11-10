@@ -1,6 +1,6 @@
 //! # Configuration Constants
 //! 
-//! This module contains all configuration constants used throughout RustMap,
+//! This module contains all configuration constants used throughout OxideScanner,
 //! including default timeouts, risk scoring parameters, and operational limits.
 //! These constants are carefully tuned for optimal performance and security.
 //! 
@@ -15,7 +15,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::constants::*;
+//! use oxidescanner::constants::*;
 //! use std::time::Duration;
 //! 
 //! // Use default scan timeout

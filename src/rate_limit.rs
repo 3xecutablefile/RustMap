@@ -15,7 +15,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::rate_limit::{RateLimiter, RateLimitPolicy};
+//! use oxidescanner::rate_limit::{RateLimiter, RateLimitPolicy};
 //! use std::time::Duration;
 //! 
 //! // Create a rate limiter for scanning
@@ -30,7 +30,7 @@
 //! }
 //! ```
 
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use rand::Rng;
 use dashmap::DashMap;
 use governor::{
@@ -77,11 +77,11 @@ impl RateLimitPolicy {
     /// Convert to governor Quota
     fn to_quota(&self) -> Result<Quota> {
         let max_ops = NonZeroU32::new(self.max_operations)
-            .ok_or_else(|| RustMapError::config("Rate limit max_operations must be greater than 0"))?;
+            .ok_or_else(|| OxideScannerError::config("Rate limit max_operations must be greater than 0"))?;
         
         let quota = if let Some(burst) = self.burst_capacity {
             let burst_ops = NonZeroU32::new(burst)
-                .ok_or_else(|| RustMapError::config("Rate limit burst_capacity must be greater than 0"))?;
+                .ok_or_else(|| OxideScannerError::config("Rate limit burst_capacity must be greater than 0"))?;
             Quota::with_period(self.period)
                 .unwrap()
                 .allow_burst(max_ops)
@@ -206,7 +206,7 @@ impl RateLimiter {
         }
         
         warn!("Rate limit wait timeout for target: {}", target);
-        Err(RustMapError::timeout(timeout.as_millis() as u64))
+        Err(OxideScannerError::timeout(timeout.as_millis() as u64))
     }
     
     /// Get the current rate limit status

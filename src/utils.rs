@@ -15,7 +15,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::utils::{resolve_target, get_port_list, progress_bar};
+//! use oxidescanner::utils::{resolve_target, get_port_list, progress_bar};
 //! 
 //! // Resolve a target
 //! let addrs = resolve_target("example.com")?;
@@ -32,7 +32,7 @@
 //! ```
 
 use crate::constants;
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use crate::validation;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::process::Command;
@@ -57,7 +57,7 @@ pub fn check_dependencies() -> Result<()> {
     }
     
     if !missing.is_empty() {
-        return Err(RustMapError::external_tool(
+        return Err(OxideScannerError::external_tool(
             "dependency_check",
             format!(
                 "Missing required tools:\n  {}\n\nInstall with:\n  sudo apt install nmap  # Debian/Ubuntu\n  sudo pacman -S nmap  # Arch\n  brew install nmap  # macOS\n\n  # Install searchsploit from exploit-db:\n  git clone https://github.com/offensive-security/exploitdb.git\n  sudo cp exploitdb/searchsploit /usr/local/bin/\n  sudo cp -r exploitdb/exploits /opt/",
@@ -87,7 +87,7 @@ pub fn resolve_target(target: &str) -> Result<Vec<SocketAddr>> {
         Ok(iter) => {
             let addrs: Vec<SocketAddr> = iter.collect();
             if addrs.is_empty() {
-                Err(RustMapError::target_resolution(format!(
+                Err(OxideScannerError::target_resolution(format!(
                     "could not resolve target: {}",
                     target
                 )))
@@ -95,7 +95,7 @@ pub fn resolve_target(target: &str) -> Result<Vec<SocketAddr>> {
                 Ok(addrs)
             }
         }
-        Err(e) => Err(RustMapError::target_resolution(format!(
+        Err(e) => Err(OxideScannerError::target_resolution(format!(
             "resolve error: {}",
             e
         ))),

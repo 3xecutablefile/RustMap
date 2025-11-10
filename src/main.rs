@@ -1,4 +1,4 @@
-// rustmap - fast port scanner and exploit finder written in Rust
+// oxscan - fast port scanner and exploit finder written in Rust
 // made by: 3xecutablefile
 
 mod config;
@@ -16,7 +16,7 @@ mod utils;
 mod validation;
 
 use colored::*;
-use error::{RustMapError, Result};
+use error::{OxideScannerError, Result};
 use std::env;
 use std::process;
 
@@ -48,7 +48,7 @@ async fn main() {
 fn print_usage() {
     eprintln!(
         "{}",
-        "usage: rustmap <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N]"
+        "usage: oxscan <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N]"
             .red()
             .bold()
     );
@@ -63,13 +63,13 @@ fn print_usage() {
     eprintln!("  --exploit-timeout MS Exploit search timeout in milliseconds (default: 10000)");
     eprintln!("  --threads N         Number of threads to use (default: all cores)");
     eprintln!("Examples:");
-    eprintln!("  rustmap 127.0.0.1                    # Scan top 1000 ports");
-    eprintln!("  rustmap example.com -1k              # Scan top 1000 ports");
-    eprintln!("  rustmap example.com -5k              # Scan top 5000 ports");
-    eprintln!("  rustmap example.com -500             # Scan first 500 ports");
-    eprintln!("  rustmap example.com --ports 1000     # Scan 1000 ports");
-    eprintln!("  rustmap example.com -65535           # Scan all ports");
-    eprintln!("  rustmap 192.168.1.1 --json          # Output in JSON format");
+    eprintln!("  oxscan 127.0.0.1                    # Scan top 1000 ports");
+    eprintln!("  oxscan example.com -1k              # Scan top 1000 ports");
+    eprintln!("  oxscan example.com -5k              # Scan top 5000 ports");
+    eprintln!("  oxscan example.com -500             # Scan first 500 ports");
+    eprintln!("  oxscan example.com --ports 1000     # Scan 1000 ports");
+    eprintln!("  oxscan example.com -65535           # Scan all ports");
+    eprintln!("  oxscan 192.168.1.1 --json          # Output in JSON format");
 }
 
 /// Main application logic
@@ -135,7 +135,7 @@ fn output_results(
 ) -> Result<()> {
     if config.json_mode {
         let json_output = serde_json::to_string_pretty(results)
-            .map_err(|e| RustMapError::parse(format!("Failed to serialize JSON: {}", e)))?;
+            .map_err(|e| OxideScannerError::parse(format!("Failed to serialize JSON: {}", e)))?;
         println!("{}", json_output);
     } else {
         exploit::print_results(results, ports);
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn test_print_scan_start() {
         let config = config::Config::from_args(&[
-            "rustmap".to_string(),
+            "oxscan".to_string(),
             "127.0.0.1".to_string(),
             "-5k".to_string(),
         ]).unwrap();

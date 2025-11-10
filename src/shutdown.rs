@@ -1,6 +1,6 @@
 //! # Graceful Shutdown Module
 //! 
-//! This module provides graceful shutdown capabilities for RustMap, allowing
+//! This module provides graceful shutdown capabilities for OxideScanner, allowing
 //! the application to clean up resources properly when receiving termination signals.
 //! It handles SIGINT, SIGTERM, and supports timeout-based shutdown.
 //! 
@@ -15,7 +15,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::shutdown::{ShutdownManager, ShutdownSignal};
+//! use oxidescanner::shutdown::{ShutdownManager, ShutdownSignal};
 //! use tokio::time::{sleep, Duration};
 //! 
 //! #[tokio::main]
@@ -48,7 +48,7 @@
 //! }
 //! ```
 
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
@@ -169,7 +169,7 @@ impl ShutdownManager {
     /// Register a cleanup task to run during shutdown
     pub async fn register_cleanup_task(&self, task: CleanupTask) -> Result<()> {
         self.cleanup_tx.send(task).await
-            .map_err(|_| RustMapError::config("Failed to register cleanup task"))?;
+            .map_err(|_| OxideScannerError::config("Failed to register cleanup task"))?;
         Ok(())
     }
     
@@ -209,7 +209,7 @@ impl ShutdownManager {
             }
             
             info!("All cleanup tasks completed");
-            Ok::<(), RustMapError>(())
+            Ok::<(), OxideScannerError>(())
         }).await {
             Ok(result) => {
                 result?;
@@ -218,7 +218,7 @@ impl ShutdownManager {
             }
             Err(_) => {
                 error!("Graceful shutdown timed out after {:?}", timeout_duration);
-                Err(RustMapError::timeout(timeout_duration.as_millis() as u64))
+                Err(OxideScannerError::timeout(timeout_duration.as_millis() as u64))
             }
         }
     }

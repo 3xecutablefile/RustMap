@@ -1,5 +1,5 @@
 [package]
-name = "rustmap"
+name = "oxidescanner"
 version = "1.0.0"
 edition = "2021"
 authors = ["3xecutablefile"]
@@ -7,9 +7,9 @@ description = "Fast port scanner and exploit finder written in Rust"
 license = "MIT"
 keywords = ["security", "scanner", "network", "exploit", "port-scanner"]
 categories = ["command-line-utilities", "network-programming"]
-repository = "https://github.com/NotSmartMan/RustMap"
-homepage = "https://github.com/NotSmartMan/RustMap"
-documentation = "https://docs.rs/rustmap"
+repository = "https://github.com/NotSmartMan/OxideScanner"
+homepage = "https://github.com/NotSmartMan/OxideScanner"
+documentation = "https://docs.rs/oxidescanner"
 readme = "README.md"
 
 [dependencies]
@@ -40,5 +40,5 @@ atty = "0.2"
 tokio-test = "0.4"
 
 [[bin]]
-name = "rustmap"
+name = "oxscan"
 path = "src/main.rs"

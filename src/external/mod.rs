@@ -16,7 +16,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::external::{BaseTool, ExternalTool};
+//! use oxidescanner::external::{BaseTool, ExternalTool};
 //! use std::time::Duration;
 //! 
 //! #[tokio::main]
@@ -32,7 +32,7 @@
 pub mod nmap;
 pub mod searchsploit;
 
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use async_trait::async_trait;
 use std::process::Output;
 use std::time::Duration;
@@ -65,10 +65,10 @@ impl BaseTool {
         use std::process::Command;
         
         let output = Command::new("which").arg(name).output()
-            .map_err(|e| RustMapError::external_tool("which", e.to_string()))?;
+            .map_err(|e| OxideScannerError::external_tool("which", e.to_string()))?;
         
         if !output.status.success() {
-            return Err(RustMapError::external_tool(
+            return Err(OxideScannerError::external_tool(
                 name,
                 "Tool not found in PATH".to_string()
             ));
@@ -76,7 +76,7 @@ impl BaseTool {
         
         let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if path.is_empty() {
-            return Err(RustMapError::external_tool(
+            return Err(OxideScannerError::external_tool(
                 name,
                 "Tool path is empty".to_string()
             ));
@@ -94,10 +94,10 @@ impl BaseTool {
         
         let output = tokio_timeout(timeout_duration, cmd.output())
             .await
-            .map_err(|_| RustMapError::timeout(timeout_duration.as_millis() as u64))?;
+            .map_err(|_| OxideScannerError::timeout(timeout_duration.as_millis() as u64))?;
         
         let output = output
-            .map_err(|e| RustMapError::external_tool(self.name, e.to_string()))?;
+            .map_err(|e| OxideScannerError::external_tool(self.name, e.to_string()))?;
         
         Ok(output)
     }

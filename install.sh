@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# RustMap Installation Script
+# OxideScanner Installation Script
 # Made by: 3xecutablefile
 # 
-# This script installs all dependencies and builds RustMap for you
+# This script installs all dependencies and builds OxideScanner for you
 
 set -e  # Exit on any error
 
@@ -37,15 +37,15 @@ print_error() {
 
 print_header() {
     echo -e "\n${BLUE}================================${NC}"
-    echo -e "${BLUE}   RustMap Installation Script   ${NC}"
+    echo -e "${BLUE}   OxideScanner Installation Script   ${NC}"
     echo -e "${BLUE}================================${NC}\n"
 }
 
 print_header
 
 # Check if we're in the right directory
-if [ ! -f "Cargo.toml" ] || [ ! -f "rustmap.rs" ]; then
-    print_error "Please run this script from the RustMap repository root directory"
+if [ ! -f "Cargo.toml" ] || [ ! -f "src/main.rs" ]; then
+    print_error "Please run this script from the OxideScanner repository root directory"
     exit 1
 fi
 
@@ -200,46 +200,46 @@ else
     print_warning "Searchsploit not available - exploit functionality will be limited"
 fi
 
-# Build RustMap
-print_info "Building RustMap..."
+# Build OxideScanner
+print_info "Building OxideScanner..."
 if cargo build --release; then
-    print_success "RustMap built successfully"
+    print_success "OxideScanner built successfully"
 else
-    print_error "Failed to build RustMap"
+    print_error "Failed to build OxideScanner"
     exit 1
 fi
 
 # Install binary to system PATH
-print_info "Installing RustMap to system PATH..."
+print_info "Installing OxideScanner to system PATH..."
 INSTALL_DIR="/usr/local/bin"
 
 if [ -w "$INSTALL_DIR" ] || sudo -n true 2>/dev/null; then
-    sudo cp target/release/rustmap "$INSTALL_DIR/"
-    sudo chmod +x "$INSTALL_DIR/rustmap"
-    print_success "RustMap installed to $INSTALL_DIR"
+    sudo cp target/release/oxscan "$INSTALL_DIR/"
+    sudo chmod +x "$INSTALL_DIR/oxscan"
+    print_success "OxideScanner installed to $INSTALL_DIR"
 else
     print_warning "Cannot write to $INSTALL_DIR"
-    print_info "You can manually copy target/release/rustmap to your PATH"
-    print_info "Or run: sudo cp target/release/rustmap $INSTALL_DIR/"
+    print_info "You can manually copy target/release/oxscan to your PATH"
+    print_info "Or run: sudo cp target/release/oxscan $INSTALL_DIR/"
 fi
 
 # Verify installation
 print_info "Verifying installation..."
 INSTALLATION_SUCCESS=false
 
-if command_exists rustmap; then
-    RUSTMAP_VERSION=$(rustmap --help 2>/dev/null | head -n 1 || echo "version unknown")
-    print_success "RustMap installed successfully!"
-    print_info "Version: $RUSTMAP_VERSION"
+if command_exists oxscan; then
+    OXIDESCANNER_VERSION=$(oxscan --help 2>/dev/null | head -n 1 || echo "version unknown")
+    print_success "OxideScanner installed successfully!"
+    print_info "Version: $OXIDESCANNER_VERSION"
     INSTALLATION_SUCCESS=true
 else
     # Try local binary
-    if [ -f "target/release/rustmap" ]; then
-        print_success "RustMap built successfully (local binary: target/release/rustmap)"
+    if [ -f "target/release/oxscan" ]; then
+        print_success "OxideScanner built successfully (local binary: target/release/oxscan)"
         print_info "Add $(pwd)/target/release to your PATH or copy the binary to a directory in PATH"
         INSTALLATION_SUCCESS=true
     else
-        print_error "RustMap installation verification failed"
+        print_error "OxideScanner installation verification failed"
         INSTALLATION_SUCCESS=false
     fi
 fi
@@ -249,24 +249,24 @@ echo -e "\n${GREEN}================================${NC}"
 echo -e "${GREEN}   Installation Complete!         ${NC}"
 echo -e "${GREEN}================================${NC}\n"
 
-print_success "RustMap is ready to use!"
+print_success "OxideScanner is ready to use!"
 
-if command_exists rustmap; then
+if command_exists oxscan; then
     echo -e "${BLUE}Test it with:${NC}"
-    echo "  rustmap scanme.nmap.org"
-    echo "  rustmap scanme.nmap.org -1k"
-    echo "  rustmap scanme.nmap.org --json"
-    echo "  rustmap --update"
+    echo "  oxscan scanme.nmap.org"
+    echo "  oxscan scanme.nmap.org -1k"
+    echo "  oxscan scanme.nmap.org --json"
+    echo "  oxscan --update"
 else
-    echo -e "${BLUE}To use RustMap:${NC}"
-    echo "  ./target/release/rustmap scanme.nmap.org"
-    echo "  ./target/release/rustmap --update"
+    echo -e "${BLUE}To use OxideScanner:${NC}"
+    echo "  ./target/release/oxscan scanme.nmap.org"
+    echo "  ./target/release/oxscan --update"
 fi
 
 echo -e "\n${YELLOW}Requirements Check:${NC}"
 echo -n "  Nmap: "; command_exists nmap && print_success "✓" || print_error "✗"
 echo -n "  Searchsploit: "; command_exists searchsploit && print_success "✓" || print_warning "✗ (limited functionality)"
-echo -n "  RustMap: "; command_exists rustmap && print_success "✓" || print_success "✓ (local binary)"
+echo -n "  OxideScanner: "; command_exists oxscan && print_success "✓" || print_success "✓ (local binary)"
 
 # Auto-cleanup: only if installation was successful
 if [ "$INSTALLATION_SUCCESS" = true ]; then
@@ -275,7 +275,7 @@ if [ "$INSTALLATION_SUCCESS" = true ]; then
     cd ..
     if rm -rf "$REPO_NAME"; then
         print_success "Repository deleted successfully"
-        print_info "RustMap will continue to work from system PATH"
+        print_info "OxideScanner will continue to work from system PATH"
         print_info "Current directory is now: $(pwd)"
     else
         print_warning "Could not delete repository (permission issue)"

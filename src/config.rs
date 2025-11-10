@@ -1,16 +1,16 @@
 //! # Configuration Management
 //! 
 //! This module handles command-line argument parsing and configuration management
-//! for RustMap scanning operations. It provides a flexible configuration system
+//! for OxideScanner scanning operations. It provides a flexible configuration system
 //! that supports various scanning options and output formats.
 //!
 //! ## Example
 //!
 //! ```rust
-//! use rustmap::config::Config;
+//! use oxidescanner::config::Config;
 //!
 //! let config = Config::from_args(&[
-//!     "rustmap".to_string(),
+//!     "oxidescanner".to_string(),
 //!     "example.com".to_string(),
 //!     "-5k".to_string(),
 //!     "--json".to_string(),
@@ -23,7 +23,7 @@
 //! ```
 
 use crate::constants;
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use crate::logging::LogConfig;
 use crate::metrics::MetricsConfig;
 use crate::rate_limit::RateLimitPolicy;
@@ -74,7 +74,7 @@ impl Config {
     /// Create configuration from command line arguments
     pub fn from_args(args: &[String]) -> Result<Self> {
         if args.len() < 2 {
-            return Err(RustMapError::config("Target argument required"));
+            return Err(OxideScannerError::config("Target argument required"));
         }
 
         // Parse and validate target
@@ -133,12 +133,12 @@ impl Config {
         for (i, arg) in args.iter().enumerate() {
             if arg == flag {
                 if i + 1 >= args.len() {
-                    return Err(RustMapError::config(format!("Missing timeout value for {}", flag)));
+                    return Err(OxideScannerError::config(format!("Missing timeout value for {}", flag)));
                 }
                 
                 let timeout_ms = args[i + 1]
                     .parse::<u64>()
-                    .map_err(|_| RustMapError::config(format!("Invalid timeout value for {}: {}", flag, args[i + 1])))?;
+                    .map_err(|_| OxideScannerError::config(format!("Invalid timeout value for {}: {}", flag, args[i + 1])))?;
                 
                 let validated_ms = validation::validate_timeout_ms(timeout_ms)?;
                 return Ok(Duration::from_millis(validated_ms));
@@ -155,15 +155,15 @@ impl Config {
         for (i, arg) in args.iter().enumerate() {
             if arg == "--ports" {
                 if i + 1 >= args.len() {
-                    return Err(RustMapError::config("Missing port count value for --ports flag"));
+                    return Err(OxideScannerError::config("Missing port count value for --ports flag"));
                 }
 
                 let port_count = args[i + 1]
                     .parse::<u16>()
-                    .map_err(|_| RustMapError::config(format!("Invalid port count: {}", args[i + 1])))?;
+                    .map_err(|_| OxideScannerError::config(format!("Invalid port count: {}", args[i + 1])))?;
 
                 if port_count < 1 || port_count > 65535 {
-                    return Err(RustMapError::config("Port count must be between 1 and 65535"));
+                    return Err(OxideScannerError::config("Port count must be between 1 and 65535"));
                 }
 
                 return Ok(Some(port_count));
@@ -195,13 +195,13 @@ impl Config {
                     if (1..=constants::ports::MAX_K_VALUE).contains(&num) {
                         return Ok(num * constants::ports::DEFAULT_LIMIT);
                     } else {
-                        return Err(RustMapError::config(format!(
+                        return Err(OxideScannerError::config(format!(
                             "Port limit must be between 1k and {}k",
                             constants::ports::MAX_K_VALUE
                         )));
                     }
                 } else {
-                    return Err(RustMapError::config(format!("Invalid port limit format: {}", arg)));
+                    return Err(OxideScannerError::config(format!("Invalid port limit format: {}", arg)));
                 }
             }
         }
@@ -213,12 +213,12 @@ impl Config {
         print!("{} Enter number of ports to scan (1-65535, or 'all' for full scan): ", "→".bright_cyan());
         
         if let Err(e) = io::stdout().flush() {
-            return Err(RustMapError::Io(e));
+            return Err(OxideScannerError::Io(e));
         }
         
         let mut input = String::new();
         if let Err(e) = io::stdin().read_line(&mut input) {
-            return Err(RustMapError::Io(e));
+            return Err(OxideScannerError::Io(e));
         }
         
         let input = input.trim().to_lowercase();
@@ -228,7 +228,7 @@ impl Config {
         } else if let Ok(num) = input.parse::<u16>() {
             validation::validate_port_limit(num)
         } else {
-            Err(RustMapError::config(format!("Invalid port number: {}", input)))
+            Err(OxideScannerError::config(format!("Invalid port number: {}", input)))
         }
     }
 
@@ -238,12 +238,12 @@ impl Config {
         for (i, arg) in args.iter().enumerate() {
             if arg == "--threads" {
                 if i + 1 >= args.len() {
-                    return Err(RustMapError::config("Missing thread count value"));
+                    return Err(OxideScannerError::config("Missing thread count value"));
                 }
                 
                 let threads = args[i + 1]
                     .parse::<usize>()
-                    .map_err(|_| RustMapError::config(format!("Invalid thread count: {}", args[i + 1])))?;
+                    .map_err(|_| OxideScannerError::config(format!("Invalid thread count: {}", args[i + 1])))?;
                 
                 if threads == 0 {
                     return Ok(num_cpus::get());
@@ -259,14 +259,14 @@ impl Config {
     fn from_env() -> Result<Self> {
         let threads = if let Ok(threads) = std::env::var("RUSTMAP_THREADS") {
             threads.parse::<usize>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_THREADS value"))?
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_THREADS value"))?
         } else {
             0 // Auto-detect
         };
 
         let shutdown_timeout = if let Ok(timeout) = std::env::var("RUSTMAP_SHUTDOWN_TIMEOUT") {
             let secs = timeout.parse::<u64>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_SHUTDOWN_TIMEOUT value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_SHUTDOWN_TIMEOUT value"))?;
             Duration::from_secs(secs)
         } else {
             Duration::from_secs(30)
@@ -274,7 +274,7 @@ impl Config {
 
         let enable_rate_limiting = if let Ok(enabled) = std::env::var("RUSTMAP_ENABLE_RATE_LIMIT") {
             enabled.parse::<bool>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_ENABLE_RATE_LIMIT value"))?
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_ENABLE_RATE_LIMIT value"))?
         } else {
             true
         };
@@ -283,7 +283,7 @@ impl Config {
             std::env::var("RUSTMAP_SCANNER_RATE_LIMIT")
                 .unwrap_or_else(|_| "50".to_string())
                 .parse::<u32>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_SCANNER_RATE_LIMIT value"))?,
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_SCANNER_RATE_LIMIT value"))?,
             Duration::from_secs(1),
         );
 
@@ -291,7 +291,7 @@ impl Config {
             std::env::var("RUSTMAP_EXTERNAL_TOOLS_RATE_LIMIT")
                 .unwrap_or_else(|_| "5".to_string())
                 .parse::<u32>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_EXTERNAL_TOOLS_RATE_LIMIT value"))?,
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_EXTERNAL_TOOLS_RATE_LIMIT value"))?,
             Duration::from_secs(1),
         );
 
@@ -299,7 +299,7 @@ impl Config {
             std::env::var("RUSTMAP_EXPLOIT_QUERIES_RATE_LIMIT")
                 .unwrap_or_else(|_| "2".to_string())
                 .parse::<u32>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_EXPLOIT_QUERIES_RATE_LIMIT value"))?,
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_EXPLOIT_QUERIES_RATE_LIMIT value"))?,
             Duration::from_secs(1),
         );
 
@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn test_config_from_args_basic() {
         let args = vec![
-            "rustmap".to_string(),
+            "oxidescanner".to_string(),
             "127.0.0.1".to_string(),
             "-5k".to_string(),
             "--json".to_string(),
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     fn test_config_from_args_with_timeouts() {
         let args = vec![
-            "rustmap".to_string(),
+            "oxidescanner".to_string(),
             "example.com".to_string(),
             "-5k".to_string(),
             "--scan-timeout".to_string(),
@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn test_config_invalid_target() {
         let args = vec![
-            "rustmap".to_string(),
+            "oxidescanner".to_string(),
             "invalid..hostname".to_string(),
         ];
         

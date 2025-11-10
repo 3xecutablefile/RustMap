@@ -1,5 +1,5 @@
 use crate::constants;
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use crate::external::{BaseTool, ExternalTool};
 use crate::validation;
 use async_trait::async_trait;
@@ -129,7 +129,7 @@ impl ExploitSearcher {
     fn parse_searchsploit_output(&self, output: &Output) -> Result<Vec<Exploit>> {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(RustMapError::external_tool(
+            return Err(OxideScannerError::external_tool(
                 "searchsploit",
                 format!("Command failed: {}", stderr)
             ));

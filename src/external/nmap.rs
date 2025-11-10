@@ -1,5 +1,5 @@
 use crate::constants;
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use crate::external::{BaseTool, ExternalTool};
 use crate::validation;
 use async_trait::async_trait;
@@ -57,7 +57,7 @@ impl NmapDetector {
     /// Format port list for nmap
     fn format_port_list(&self, ports: &[u16]) -> Result<String> {
         if ports.is_empty() {
-            return Err(RustMapError::validation("Port list cannot be empty"));
+            return Err(OxideScannerError::validation("Port list cannot be empty"));
         }
         
         let port_strings: Vec<String> = ports
@@ -89,7 +89,7 @@ impl NmapDetector {
     fn parse_nmap_output(&self, output: &Output) -> Result<Vec<NmapService>> {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(RustMapError::external_tool(
+            return Err(OxideScannerError::external_tool(
                 "nmap",
                 format!("Command failed: {}", stderr)
             ));
@@ -113,11 +113,11 @@ impl NmapDetector {
     /// Parse nmap XML document
     fn parse_nmap_xml(&self, xml_content: &str) -> Result<Vec<NmapService>> {
         let doc = Document::parse(xml_content)
-            .map_err(|e| RustMapError::parse(format!("Failed to parse nmap XML: {}", e)))?;
+            .map_err(|e| OxideScannerError::parse(format!("Failed to parse nmap XML: {}", e)))?;
         
         let root = doc.root_element();
         if root.tag_name().name() != "nmaprun" {
-            return Err(RustMapError::parse("Invalid nmap XML format".to_string()));
+            return Err(OxideScannerError::parse("Invalid nmap XML format".to_string()));
         }
         
         let mut services = Vec::new();

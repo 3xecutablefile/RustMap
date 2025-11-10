@@ -1,6 +1,6 @@
 //! # Structured Logging Module
 //! 
-//! This module provides comprehensive structured logging capabilities for RustMap
+//! This module provides comprehensive structured logging capabilities for OxideScanner
 //! with configurable log levels, output formats, and file rotation support.
 //! It uses the `tracing` ecosystem for high-performance structured logging.
 //! 
@@ -16,7 +16,7 @@
 //! ## Example
 //! 
 //! ```rust
-//! use rustmap::logging::{init_logging, LogConfig};
+//! use oxidescanner::logging::{init_logging, LogConfig};
 //! 
 //! let config = LogConfig::from_env()?;
 //! init_logging(&config)?;
@@ -27,7 +27,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use crate::error::{RustMapError, Result};
+use crate::error::{OxideScannerError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
@@ -77,12 +77,12 @@ impl LogConfig {
         
         if let Ok(console) = std::env::var("RUSTMAP_LOG_CONSOLE") {
             config.console = console.parse::<bool>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_LOG_CONSOLE value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_LOG_CONSOLE value"))?;
         }
         
         if let Ok(json) = std::env::var("RUSTMAP_LOG_JSON") {
             config.json = json.parse::<bool>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_LOG_JSON value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_LOG_JSON value"))?;
         }
         
         if let Ok(file_path) = std::env::var("RUSTMAP_LOG_FILE") {
@@ -91,17 +91,17 @@ impl LogConfig {
         
         if let Ok(max_size) = std::env::var("RUSTMAP_LOG_MAX_SIZE") {
             config.max_file_size = max_size.parse::<u64>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_LOG_MAX_SIZE value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_LOG_MAX_SIZE value"))?;
         }
         
         if let Ok(max_files) = std::env::var("RUSTMAP_LOG_MAX_FILES") {
             config.max_files = max_files.parse::<usize>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_LOG_MAX_FILES value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_LOG_MAX_FILES value"))?;
         }
         
         if let Ok(timestamps) = std::env::var("RUSTMAP_LOG_CONSOLE_TIMESTAMPS") {
             config.console_timestamps = timestamps.parse::<bool>()
-                .map_err(|_| RustMapError::config("Invalid RUSTMAP_LOG_CONSOLE_TIMESTAMPS value"))?;
+                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_LOG_CONSOLE_TIMESTAMPS value"))?;
         }
         
         Ok(config)
@@ -111,7 +111,7 @@ impl LogConfig {
     pub fn validate(&self) -> Result<()> {
         let valid_levels = ["trace", "debug", "info", "warn", "error"];
         if !valid_levels.contains(&self.level.as_str()) {
-            return Err(RustMapError::config(format!(
+            return Err(OxideScannerError::config(format!(
                 "Invalid log level '{}'. Valid levels: {}",
                 self.level,
                 valid_levels.join(", ")
@@ -119,11 +119,11 @@ impl LogConfig {
         }
         
         if self.max_file_size == 0 {
-            return Err(RustMapError::config("Log file size must be greater than 0"));
+            return Err(OxideScannerError::config("Log file size must be greater than 0"));
         }
         
         if self.max_files == 0 {
-            return Err(RustMapError::config("Max files must be greater than 0"));
+            return Err(OxideScannerError::config("Max files must be greater than 0"));
         }
         
         Ok(())
@@ -178,11 +178,11 @@ pub fn init_logging(config: &LogConfig) -> Result<Vec<WorkerGuard>> {
     if let Some(file_path) = &config.file_path {
         let file_appender = tracing_appender::rolling::Builder::new()
             .rotation(tracing_appender::rolling::Rotation::HOURLY)
-            .filename_prefix("rustmap")
+            .filename_prefix("oxidescanner")
             .filename_suffix("log")
             .max_log_files(config.max_files)
             .build(file_path.parent().unwrap_or_else(|| std::path::Path::new(".")))
-            .map_err(|e| RustMapError::config(format!("Failed to create log appender: {}", e)))?;
+            .map_err(|e| OxideScannerError::config(format!("Failed to create log appender: {}", e)))?;
         
         let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
         guards.push(guard);
