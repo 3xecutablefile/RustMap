@@ -449,16 +449,23 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Project Status
 
+<<<<<<< HEAD
 - **Stable**: Production-ready for security testing
 - **Fast**: Optimized for performance
 - **Safe**: Input validation and error handling
 - **Tested**: Comprehensive test suite
 - **Documented**: Full API and user docs
+=======
+- **Documentation**: [Full documentation](https://docs.rs/rustmap)
+- **Issues**: [GitHub Issues](https://github.com/3xecutablefile/RustMap/issues)
+
+>>>>>>> e0e5dd6a020901bbd38cffa83b3741765f1b4437
 
 ---
 
 ## Start Hacking Now
 
+<<<<<<< HEAD
 ```bash
 # Clone and scan in 30 seconds
 git clone https://github.com/NotSmartMan/RustMap.git && cd RustMap && ./install.sh && rustmap scanme.nmap.org -1k
@@ -467,3 +474,6 @@ git clone https://github.com/NotSmartMan/RustMap.git && cd RustMap && ./install.
 **Made for hackers, by hackers.**
 
 *Built by security professionals, for security professionals.*
+=======
+*Built for security professionals, by security professionals.*
+>>>>>>> e0e5dd6a020901bbd38cffa83b3741765f1b4437
