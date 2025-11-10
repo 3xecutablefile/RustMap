@@ -886,8 +886,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Documentation**: [Full documentation](https://docs.rs/rustmap)
 - **Issues**: [GitHub Issues](https://github.com/3xecutablefile/RustMap/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/3xecutablefile/RustMap/discussions)
-- **Security**: Report security issues privately to security@yourorg.com
+
 
 ---
 
