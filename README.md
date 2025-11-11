@@ -15,22 +15,7 @@ A fast network port scanner with intelligent exploit discovery. Built for securi
 - **Multiple formats** - Terminal interface and JSON output
 - **Rate limiting** - Configurable to avoid detection
 
-## What's New in v1.0.1
 
-### Intelligent Query Filtering
-
-Fixed a major issue where the scanner returned thousands of irrelevant exploits for basic services like "http" and "https".
-
-**Before**: Generic service detection → 27,309 irrelevant exploits  
-**After**: Smart filtering → Only searches when specific service info is available
-
-| Example | Detection | Exploits Found |
-|---------|-----------|----------------|
-| v1.0.0 | `http` | 27,309 (too many) |
-| v1.0.1 | `http Apache httpd 2.4.7` | 17 (relevant) |
-| v1.0.1 | `http` (generic) | 0 (correctly skipped) |
-
-This means you get actionable results instead of overwhelming noise.
 
 ## Quick Start
 
