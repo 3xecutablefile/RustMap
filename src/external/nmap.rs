@@ -2,7 +2,6 @@ use crate::constants;
 use crate::error::{OxideScannerError, Result};
 use crate::external::{BaseTool, ExternalTool};
 use crate::validation;
-use async_trait::async_trait;
 use roxmltree::Document;
 use serde::Serialize;
 use std::process::Output;
@@ -28,7 +27,7 @@ impl NmapDetector {
         let base_tool = BaseTool::new("nmap")?;
         Ok(Self { base_tool })
     }
-    
+
     /// Detect services on specified ports for a target
     pub async fn detect_services(
         &self,
@@ -37,37 +36,34 @@ impl NmapDetector {
         timeout: Option<Duration>,
     ) -> Result<Vec<NmapService>> {
         let timeout = timeout.unwrap_or(Duration::from_secs(constants::NMAP_TIMEOUT_SECS));
-        
+
         // Validate inputs
         let validated_target = validation::validate_target(target)?;
         let port_list = self.format_port_list(ports)?;
         let validated_port_list = validation::validate_port_list(&port_list)?;
-        
+
         // Build nmap command arguments
         let args = self.build_nmap_args(&validated_target, &validated_port_list);
         let args_str: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-        
+
         // Execute nmap
         let output = self.execute_with_timeout(&args_str, timeout).await?;
-        
+
         // Parse output
         self.parse_nmap_output(&output)
     }
-    
+
     /// Format port list for nmap
     fn format_port_list(&self, ports: &[u16]) -> Result<String> {
         if ports.is_empty() {
             return Err(OxideScannerError::validation("Port list cannot be empty"));
         }
-        
-        let port_strings: Vec<String> = ports
-            .iter()
-            .map(|p| p.to_string())
-            .collect();
-        
+
+        let port_strings: Vec<String> = ports.iter().map(|p| p.to_string()).collect();
+
         Ok(port_strings.join(","))
     }
-    
+
     /// Build nmap command arguments
     fn build_nmap_args(&self, target: &str, port_list: &str) -> Vec<String> {
         vec![
@@ -84,23 +80,23 @@ impl NmapDetector {
             target.to_string(),
         ]
     }
-    
+
     /// Parse nmap XML output
     fn parse_nmap_output(&self, output: &Output) -> Result<Vec<NmapService>> {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(OxideScannerError::external_tool(
                 "nmap",
-                format!("Command failed: {}", stderr)
+                format!("Command failed: {}", stderr),
             ));
         }
-        
+
         let xml_content = String::from_utf8_lossy(&output.stdout);
         let xml_clean = self.clean_xml_content(&xml_content);
-        
+
         self.parse_nmap_xml(&xml_clean)
     }
-    
+
     /// Clean XML content by removing DOCTYPE declarations
     fn clean_xml_content(&self, xml_content: &str) -> String {
         xml_content
@@ -109,84 +105,80 @@ impl NmapDetector {
             .collect::<Vec<_>>()
             .join("\n")
     }
-    
+
     /// Parse nmap XML document
     fn parse_nmap_xml(&self, xml_content: &str) -> Result<Vec<NmapService>> {
         let doc = Document::parse(xml_content)
             .map_err(|e| OxideScannerError::parse(format!("Failed to parse nmap XML: {}", e)))?;
-        
+
         let root = doc.root_element();
         if root.tag_name().name() != "nmaprun" {
-            return Err(OxideScannerError::parse("Invalid nmap XML format".to_string()));
+            return Err(OxideScannerError::parse(
+                "Invalid nmap XML format".to_string(),
+            ));
         }
-        
+
         let mut services = Vec::new();
-        
+
         for host in root.children() {
             if host.tag_name().name() != "host" {
                 continue;
             }
-            
+
             for ports_elem in host.children() {
                 if ports_elem.tag_name().name() != "ports" {
                     continue;
                 }
-                
+
                 for port_elem in ports_elem.children() {
                     if port_elem.tag_name().name() != "port" {
                         continue;
                     }
-                    
+
                     if let Some(service) = self.parse_port_element(&port_elem)? {
                         services.push(service);
                     }
                 }
             }
         }
-        
+
         services.sort_by_key(|s| s.port);
         Ok(services)
     }
-    
+
     /// Parse individual port element from nmap XML
     fn parse_port_element(&self, port_elem: &roxmltree::Node) -> Result<Option<NmapService>> {
         let port_id = port_elem
             .attribute("portid")
             .and_then(|p| p.parse::<u16>().ok())
             .filter(|&p| p > 0);
-        
+
         let port_id = match port_id {
             Some(p) => p,
             None => return Ok(None),
         };
-        
+
         let mut service_name = "unknown".to_string();
         let mut product = String::new();
         let mut version = String::new();
-        
+
         for service_elem in port_elem.children() {
             if service_elem.tag_name().name() != "service" {
                 continue;
             }
-            
+
             service_name = service_elem
                 .attribute("name")
                 .unwrap_or("unknown")
                 .to_string();
-            
-            product = service_elem
-                .attribute("product")
-                .unwrap_or("")
-                .to_string();
-            
-            version = service_elem
-                .attribute("version")
-                .unwrap_or("")
-                .to_string();
-            
+
+            product = service_elem.attribute("product").unwrap_or("").to_string();
+
+            version = service_elem.attribute("version").unwrap_or("").to_string();
+
             break;
         }
-        
+
         Ok(Some(NmapService {
             port: port_id,
             service: service_name,
@@ -196,19 +188,20 @@ impl NmapDetector {
     }
 }
 
-#[async_trait]
 impl ExternalTool for NmapDetector {
     async fn execute_with_timeout(&self, args: &[&str], timeout: Duration) -> Result<Output> {
         self.base_tool.execute_command(args, timeout).await
     }
-    
 
+    fn name(&self) -> &str {
+        "nmap"
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_format_port_list() {
         let detector = NmapDetector::new().unwrap();
@@ -216,7 +209,7 @@ mod tests {
         let result = detector.format_port_list(&ports).unwrap();
         assert_eq!(result, "22,80,443");
     }
-    
+
     #[test]
     fn test_format_empty_port_list() {
         let detector = NmapDetector::new().unwrap();

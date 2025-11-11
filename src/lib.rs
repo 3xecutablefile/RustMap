@@ -1,24 +1,24 @@
 //! # OxideScanner - Fast Port Scanner and Exploit Finder
-//! 
+//!
 //! OxideScanner is a high-performance network security tool written in Rust that combines
 //! fast TCP port scanning with automatic exploit database lookups. It provides
 //! parallel scanning capabilities, service detection, and risk assessment.
-//! 
+//!
 //! ## Features
-//! 
+//!
 //! - **Fast TCP Scanning**: Parallel port scanning using Rayon
 //! - **Service Detection**: Banner grabbing and protocol fingerprinting
 //! - **Exploit Integration**: Automatic searchsploit queries for detected services
 //! - **Risk Assessment**: Heuristic scoring based on CVSS and service criticality
 //! - **Multiple Output Formats**: Interactive terminal UI and JSON export
-//! 
+//!
 //! ## Quick Start
-//! 
+//!
 //! ```rust
 //! use oxidescanner::config::Config;
 //! use oxidescanner::scanner::fast_scan;
 //! use oxidescanner::utils::resolve_target;
-//! 
+//!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let config = Config::from_args(&[
@@ -34,11 +34,11 @@
 //!     Ok(())
 //! }
 //! ```
-//! 
+//!
 //! ## Architecture
-//! 
+//!
 //! The library is organized into several modules:
-//! 
+//!
 //! - [`config`]: Command-line argument parsing and configuration management
 //! - [`scanner`]: High-performance TCP port scanning and service detection
 //! - [`exploit`]: Exploit database integration and risk assessment

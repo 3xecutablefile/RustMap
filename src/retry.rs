@@ -1,10 +1,11 @@
 //! # Retry Configuration Module
-//! 
+//!
 //! This module provides retry configuration for OxideScanner operations.
 
-use crate::error::{OxideScannerError, Result};
-use serde::{Deserialize, Serialize};
+use crate::error::OxideScannerError;
 use std::time::Duration;
+
+type Result<T> = std::result::Result<T, OxideScannerError>;
 
 /// Retry configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -44,34 +45,35 @@ impl RetryConfig {
             jitter_factor: 0.1,
         }
     }
-    
+
     /// Create retry configuration from environment variables
     pub fn from_env() -> Result<Self> {
-        use crate::error::{OxideScannerError, Result};
-        
-        let max_retries = if let Ok(max_retries) = std::env::var("RUSTMAP_RETRY_MAX_ATTEMPTS") {
-            max_retries.parse::<u32>()
-                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_RETRY_MAX_ATTEMPTS value"))?
+        let max_retries = if let Ok(max_retries) = std::env::var("OXIDE_RETRY_MAX_ATTEMPTS") {
+            max_retries
+                .parse::<u32>()
+                .map_err(|_| OxideScannerError::config("Invalid OXIDE_RETRY_MAX_ATTEMPTS value"))?
         } else {
             3
         };
-        
-        let base_delay = if let Ok(delay) = std::env::var("RUSTMAP_RETRY_BASE_DELAY_MS") {
-            let ms = delay.parse::<u64>()
-                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_RETRY_BASE_DELAY_MS value"))?;
+
+        let base_delay = if let Ok(delay) = std::env::var("OXIDE_RETRY_BASE_DELAY_MS") {
+            let ms = delay.parse::<u64>().map_err(|_| {
+                OxideScannerError::config("Invalid OXIDE_RETRY_BASE_DELAY_MS value")
+            })?;
             Duration::from_millis(ms)
         } else {
             Duration::from_millis(100)
         };
-        
-        let max_delay = if let Ok(delay) = std::env::var("RUSTMAP_RETRY_MAX_DELAY_MS") {
-            let ms = delay.parse::<u64>()
-                .map_err(|_| OxideScannerError::config("Invalid RUSTMAP_RETRY_MAX_DELAY_MS value"))?;
+
+        let max_delay = if let Ok(delay) = std::env::var("OXIDE_RETRY_MAX_DELAY_MS") {
+            let ms = delay
+                .parse::<u64>()
+                .map_err(|_| OxideScannerError::config("Invalid OXIDE_RETRY_MAX_DELAY_MS value"))?;
             Duration::from_millis(ms)
         } else {
             Duration::from_secs(5)
         };
-        
+
         Ok(Self {
             max_retries,
             base_delay,
@@ -80,19 +82,21 @@ impl RetryConfig {
             jitter_factor: 0.1,
         })
     }
-    
+
     /// Set the backoff multiplier
+    #[allow(dead_code)]
     pub fn with_backoff_multiplier(mut self, multiplier: f64) -> Self {
         self.backoff_multiplier = multiplier;
         self
     }
-    
+
     /// Set the jitter factor
+    #[allow(dead_code)]
     pub fn with_jitter_factor(mut self, factor: f64) -> Self {
         self.jitter_factor = factor;
         self
     }
-    
+
     /// Calculate delay for a specific retry attempt
     pub fn calculate_delay(&self, _attempt: u32) -> Duration {
         // Note: attempt parameter is intentionally unused in current implementation
@@ -104,7 +108,7 @@ impl RetryConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_retry_config_default() {
         let config = RetryConfig::default();
@@ -112,7 +116,7 @@ mod tests {
         assert_eq!(config.base_delay, Duration::from_millis(100));
         assert_eq!(config.backoff_multiplier, 2.0);
     }
-    
+
     #[test]
     fn test_retry_config_new() {
         let config = RetryConfig::new(5, Duration::from_secs(1), Duration::from_secs(10));

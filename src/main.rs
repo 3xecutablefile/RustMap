@@ -25,15 +25,15 @@ use std::process;
 async fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() < 2 {
+    if args.len() < 2 || args[1] == "--help" || args[1] == "-h" {
         print_usage();
-        process::exit(1);
+        process::exit(0);
     }
 
     let config = match config::Config::from_args(&args) {
         Ok(cfg) => cfg,
         Err(e) => {
-            eprintln!("{} {}", "✗".red().bold(), e);
+            eprintln!("{} {}", "ERROR".red().bold(), e);
             process::exit(1);
         }
     };
@@ -75,7 +75,7 @@ fn print_usage() {
 /// Main application logic
 async fn run(config: config::Config) -> Result<()> {
     // Check dependencies
-    utils::check_dependencies()?;
+    crate::utils::check_dependencies()?;
 
     // Resolve target
     let target_addrs = utils::resolve_target(&config.target)?;
@@ -89,7 +89,7 @@ async fn run(config: config::Config) -> Result<()> {
 
     if open_ports.is_empty() {
         if !config.json_mode {
-            println!("{} No open ports found", "⚠".yellow());
+            println!("{} No open ports found", "WARNING".yellow());
         }
         return Ok(());
     }
@@ -99,7 +99,7 @@ async fn run(config: config::Config) -> Result<()> {
 
     if ports.is_empty() {
         if !config.json_mode {
-            println!("{} No services detected", "⚠".yellow());
+            println!("{} No services detected", "WARNING".yellow());
         }
         return Ok(());
     }
@@ -117,7 +117,7 @@ async fn run(config: config::Config) -> Result<()> {
 fn print_scan_start(config: &config::Config) {
     println!(
         "{} Fast scanning {} ports on {}...",
-        "⚡".bright_yellow(),
+        "FAST SCAN".bright_yellow(),
         if config.port_limit == constants::ports::MAX {
             "all".to_string()
         } else {
@@ -140,27 +140,28 @@ fn output_results(
     } else {
         exploit::print_results(results, ports);
     }
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_print_usage_doesnt_panic() {
         print_usage();
     }
-    
+
     #[test]
     fn test_print_scan_start() {
         let config = config::Config::from_args(&[
             "oxscan".to_string(),
             "127.0.0.1".to_string(),
             "-5k".to_string(),
-        ]).unwrap();
-        
+        ])
+        .unwrap();
+
         print_scan_start(&config);
     }
 }

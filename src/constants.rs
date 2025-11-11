@@ -1,31 +1,31 @@
 //! # Configuration Constants
-//! 
+//!
 //! This module contains all configuration constants used throughout OxideScanner,
 //! including default timeouts, risk scoring parameters, and operational limits.
 //! These constants are carefully tuned for optimal performance and security.
-//! 
+//!
 //! ## Categories
-//! 
+//!
 //! - **Timeouts**: Default timeouts for various operations
 //! - **Risk Scoring**: CVSS mappings and risk thresholds
 //! - **Service Multipliers**: Risk multipliers for different service types
 //! - **Port Limits**: Port scanning limits and ranges
 //! - **Validation**: Input validation limits and constraints
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ```rust
 //! use oxidescanner::constants::*;
 //! use std::time::Duration;
-//! 
+//!
 //! // Use default scan timeout
 //! let timeout = Duration::from_millis(DEFAULT_SCAN_TIMEOUT_MS);
-//! 
+//!
 //! // Check risk thresholds
 //! let score = 25.0;
 //! let is_critical = score >= risk::CRITICAL;
 //! let is_high_risk = score >= risk::HIGH;
-//! 
+//!
 //! // Apply service multipliers
 //! let service_type = "http";
 //! let multiplier = match service_type {
@@ -36,7 +36,7 @@
 //! ```
 
 /// Default timeout for TCP connections in milliseconds
-/// 
+///
 /// This timeout is used for initial TCP connect attempts during port scanning.
 /// A shorter timeout improves scanning speed but may miss slow-responding services.
 pub const DEFAULT_SCAN_TIMEOUT_MS: u64 = 25;
@@ -159,5 +159,4 @@ pub mod progress {
 pub mod validation {
     /// Maximum target string length
     pub const MAX_TARGET_LENGTH: usize = 253;
-
 }

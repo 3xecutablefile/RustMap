@@ -1,5 +1,5 @@
 //! # Rate Limiting Configuration Module
-//! 
+//!
 //! This module provides rate limiting policy configuration for OxideScanner.
 //! The actual rate limiting functionality is not used in the current implementation.
 
@@ -26,8 +26,9 @@ impl RateLimitPolicy {
             burst_capacity: None,
         }
     }
-    
+
     /// Create a new rate limit policy with burst capacity
+    #[allow(dead_code)]
     pub fn with_burst(max_operations: u32, period: Duration, burst_capacity: u32) -> Self {
         Self {
             max_operations,
@@ -35,29 +36,32 @@ impl RateLimitPolicy {
             burst_capacity: Some(burst_capacity),
         }
     }
-    
+
     /// Convert policy to governor Quota
-    /// 
+    ///
     /// Returns a Quota for use with the governor rate limiter crate.
-    fn to_quota(&self) -> Result<governor::Quota> {
+    #[allow(dead_code)]
+    pub fn to_quota(&self) -> Result<governor::Quota> {
         use governor::Quota;
         use std::num::NonZeroU32;
-        
-        let max_ops = NonZeroU32::new(self.max_operations)
-            .ok_or_else(|| OxideScannerError::config("Rate limit max_operations must be greater than 0"))?;
-        
+
+        let max_ops = NonZeroU32::new(self.max_operations).ok_or_else(|| {
+            OxideScannerError::config("Rate limit max_operations must be greater than 0")
+        })?;
+
         let quota = if let Some(burst) = self.burst_capacity {
-            let _burst_ops = NonZeroU32::new(burst)
-                .ok_or_else(|| OxideScannerError::config("Rate limit burst_capacity must be greater than 0"))?;
+            let burst_ops = NonZeroU32::new(burst).ok_or_else(|| {
+                OxideScannerError::config("Rate limit burst_capacity must be greater than 0")
+            })?;
             Quota::with_period(self.period)
                 .unwrap()
-                .allow_burst(max_ops)
+                .allow_burst(burst_ops)
         } else {
             Quota::with_period(self.period)
                 .unwrap()
                 .allow_burst(max_ops)
         };
-        
+
         Ok(quota)
     }
 }

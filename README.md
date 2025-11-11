@@ -167,14 +167,14 @@ oxscan <target> [port-options] [other-options]
 Configure OxideScanner using environment variables:
 
 ```bash
-export RUSTMAP_THREADS=8                    # Worker threads
-export RUSTMAP_SCAN_TIMEOUT=50              # Scan timeout in ms
-export RUSTMAP_SHUTDOWN_TIMEOUT=60          # Shutdown timeout in seconds
-export RUSTMAP_ENABLE_RATE_LIMIT=true       # Enable rate limiting
-export RUSTMAP_SCANNER_RATE_LIMIT=100       # Scanner requests per second
-export RUSTMAP_EXPLOIT_QUERIES_RATE_LIMIT=5 # Exploit queries per second
-export RUSTMAP_LOG_LEVEL=info               # Log level (trace, debug, info, warn, error)
-export RUSTMAP_METRICS_PORT=8080            # Metrics server port
+export OXIDE_THREADS=8                    # Worker threads
+export OXIDE_SCAN_TIMEOUT=50              # Scan timeout in ms
+export OXIDE_SHUTDOWN_TIMEOUT=60          # Shutdown timeout in seconds
+export OXIDE_ENABLE_RATE_LIMIT=true       # Enable rate limiting
+export OXIDE_SCANNER_RATE_LIMIT=100       # Scanner requests per second
+export OXIDE_EXPLOIT_QUERIES_RATE_LIMIT=5 # Exploit queries per second
+export OXIDE_LOG_LEVEL=info               # Log level (trace, debug, info, warn, error)
+export OXIDE_METRICS_PORT=8080            # Metrics server port
 ```
 
 ---
