@@ -1,323 +1,308 @@
 # OxideScanner
 
-A high-performance network security scanner designed for enterprise security teams and professional penetration testing engagements. OxideScanner combines fast port scanning with intelligent exploit discovery to provide comprehensive vulnerability assessment capabilities.
+A fast network port scanner with intelligent exploit discovery. Built for security professionals who need quick, accurate vulnerability assessment.
 
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)]()
 
-## Core Features
+## Features
 
-- **High-Performance Port Scanning**: Parallel TCP scanning with configurable thread pools and optimization
-- **Advanced Service Detection**: Automated service fingerprinting using industry-standard nmap integration
-- **Intelligent Exploit Discovery**: Searchsploit integration with smart query filtering for accurate results
-- **Professional Risk Assessment**: CVSS-based scoring with service-specific risk multipliers
-- **Multiple Output Formats**: Rich terminal interface and structured JSON export for automation
-- **Enterprise Rate Limiting**: Configurable throttling to respect target systems
+- **Fast port scanning** - Parallel TCP scanning with configurable threads
+- **Service detection** - Automatic service fingerprinting via nmap
+- **Smart exploit discovery** - Searchsploit integration with intelligent filtering
+- **Risk assessment** - CVSS-based scoring with service multipliers
+- **Multiple formats** - Terminal interface and JSON output
+- **Rate limiting** - Configurable to avoid detection
 
-## Enterprise Enhancements in v1.0.1
+## What's New in v1.0.1
 
-### Intelligent Query Filtering System
+### Intelligent Query Filtering
 
-**Challenge Addressed**: Previous versions generated overwhelming results with thousands of irrelevant exploits for generic service terms.
+Fixed a major issue where the scanner returned thousands of irrelevant exploits for basic services like "http" and "https".
 
-**Solution Implemented**: Advanced filtering algorithm that only performs exploit searches when specific, actionable service information is available.
+**Before**: Generic service detection → 27,309 irrelevant exploits  
+**After**: Smart filtering → Only searches when specific service info is available
 
-| Service Detection | Query Result | Exploit Count |
-|------------------|--------------|---------------|
-| **Generic** `http` (v1.0.0) | 27,309 irrelevant exploits | Excessive noise |
-| **Specific** `http Apache httpd 2.4.7` (v1.0.1) | 17 targeted exploits | Actionable intelligence |
-| **Generic** `https` (v1.0.0) | 27,309 irrelevant exploits | Excessive noise |
-| **Generic** `https` (v1.0.1) | No search performed | Correctly filtered |
+| Example | Detection | Exploits Found |
+|---------|-----------|----------------|
+| v1.0.0 | `http` | 27,309 (too many) |
+| v1.0.1 | `http Apache httpd 2.4.7` | 17 (relevant) |
+| v1.0.1 | `http` (generic) | 0 (correctly skipped) |
 
-### Business Impact
+This means you get actionable results instead of overwhelming noise.
 
-- **Reduced Analysis Time**: 95% reduction in false positive exploitation data
-- **Improved Accuracy**: Focus on actionable vulnerability intelligence
-- **Enhanced Productivity**: Security teams receive relevant, targeted results
+## Quick Start
 
-## Implementation Guide
-
-### Enterprise Deployment
-
-#### Automated Installation
+### Installation
 ```bash
 git clone https://github.com/NotSmartMan/OxideScanner.git
 cd OxideScanner
 ./install.sh
 ```
 
-#### Manual Enterprise Build
+### Basic Usage
 ```bash
-# Prerequisites Installation
-sudo apt install nmap ruby git        # Ubuntu/Debian Enterprise
-brew install nmap ruby git            # macOS Enterprise
+# Quick scan (top 1000 ports)
+oxscan target.com
 
-# Production Build
+# Scan specific ranges
+oxscan target.com -1k     # First 1000 ports
+oxscan target.com -5k     # First 5000 ports
+oxscan target.com -10k    # First 10000 ports
+
+# JSON output for scripts
+oxscan target.com -5k --json > results.json
+
+# Performance tuning
+oxscan target.com -30k --threads 32 --scan-timeout 50
+```
+
+## Installation Options
+
+### Automated
+```bash
+git clone https://github.com/NotSmartMan/OxideScanner.git
+cd OxideScanner
+chmod +x install.sh
+./install.sh
+```
+
+### Manual Build
+```bash
+# Prerequisites
+sudo apt install nmap ruby git        # Ubuntu/Debian
+brew install nmap ruby git            # macOS
+
+# Build from source
 git clone https://github.com/NotSmartMan/OxideScanner.git
 cd OxideScanner
 cargo build --release
 sudo cp target/release/oxscan /usr/local/bin/
 ```
 
-### Operational Configuration
+## Usage Reference
 
-#### Command-Line Interface
+### Command Syntax
 ```bash
-oxscan <target> [enterprise-options]
+oxscan <target> [options]
 ```
 
-#### Enterprise Scanning Parameters
+### Common Options
 
-| Parameter | Description | Enterprise Use Case |
-|-----------|-------------|-------------------|
-| `-Nk` | Port range scanning | `-1k` for standard assessment, `-30k` for comprehensive audit |
-| `-N` | Exact port count | Precise compliance scanning requirements |
-| `--ports N` | Custom port specification | Regulatory compliance port requirements |
-| `--json` | Structured output | SIEM integration and automated reporting |
-| `--threads N` | Parallel processing | Performance optimization for large-scale operations |
-| `--scan-timeout MS` | Connection timeout | Network optimization for enterprise environments |
+| Option | Description | Example |
+|--------|-------------|---------|
+| `-Nk` | Scan N×1000 ports | `-1k` = 1000, `-5k` = 5000 |
+| `-N` | Scan N ports | `-1000` = exactly 1000 ports |
+| `--ports N` | Scan port count | `--ports 1000` |
+| `--json` | JSON output | `--json` |
+| `--threads N` | Worker threads | `--threads 8` |
+| `--scan-timeout MS` | TCP timeout | `--scan-timeout 50` |
 
-#### Environment Configuration for Enterprise Operations
+### Configuration
 ```bash
-export OXIDE_THREADS=16                   # High-performance parallel scanning
-export OXIDE_SCAN_TIMEOUT=25              # Optimized for enterprise networks
-export OXIDE_LOG_LEVEL=info               # Production logging standards
-export OXIDE_ENABLE_RATE_LIMIT=true       # Responsible scanning practices
+export OXIDE_THREADS=8                    # Parallel scanning
+export OXIDE_SCAN_TIMEOUT=50              # Connection timeout
+export OXIDE_LOG_LEVEL=info               # Logging level
+export OXIDE_ENABLE_RATE_LIMIT=true       # Enable rate limiting
 ```
 
-## Professional Use Cases
+## Examples
 
-### Security Assessment Workflows
-
-#### Initial Reconnaissance
+### Basic Security Scan
 ```bash
-# Enterprise perimeter assessment
-oxscan corporate-target.com
+# Quick vulnerability assessment
+oxscan scanme.nmap.org
 
-# Detailed service enumeration
-oxscan api.corporate-target.com -10k
+# Custom port range
+oxscan example.com -10k
 ```
 
-#### Comprehensive Security Auditing
+### Large-Scale Scanning
 ```bash
-# Full enterprise infrastructure assessment
-oxscan target.corporation.com -30k --threads 32 --json
+# Comprehensive scan with JSON output
+oxscan target.com -30k --threads 32 --json
 
-# Cloud service security evaluation
-oxscan cloud-service.corporation.com -10k --scan-timeout 25
+# Cloud service scanning
+oxscan api.example.com -10k --scan-timeout 25
 ```
 
-#### Automated Security Integration
+### Automation
 ```bash
-# Continuous security monitoring integration
-oxscan production-target.com -20k --json | jq '.results[] | select(.risk_level == "CRITICAL")'
+# Filter critical findings
+oxscan target.com -20k --json | jq '.results[] | select(.risk_level == "CRITICAL")'
 
-# Compliance reporting automation
-oxscan staging.corporation.com -5k --json > security-compliance-report.json
+# CI/CD integration
+oxscan staging.example.com -5k --json > security-report.json
 ```
 
-### Enterprise Risk Management
+## Understanding Results
 
-#### Intelligent Vulnerability Analysis
+### How It Works
 
-OxideScanner v1.0.1 employs sophisticated query filtering to deliver accurate vulnerability intelligence:
+1. **Port Scanning**: Fast TCP connect scanning on target ports
+2. **Service Detection**: Nmap identifies services and versions
+3. **Smart Filtering**: Only searches exploits when specific service info is available
+4. **Risk Analysis**: Calculates CVSS-based risk scores
 
-**Technical Process Flow**:
-1. **Service Identification**: Nmap provides detailed service and product identification
-2. **Intelligent Filtering**: Algorithm evaluates specificity of service information
-3. **Targeted Exploitation**: Searchsploit queries executed only for actionable targets
-4. **Risk Quantification**: CVSS-based scoring with enterprise multipliers
+### Risk Levels
 
-#### Service Detection Intelligence Matrix
+| Level | Score | Action Required |
+|-------|-------|-----------------|
+| **CRITICAL** | 50+ | Immediate attention |
+| **HIGH** | 30-49 | Priority fix |
+| **MEDIUM** | 15-29 | Schedule remediation |
+| **LOW** | <15 | Monitor |
 
-| Service Classification | Detection Output | Exploit Search Strategy |
-|----------------------|------------------|----------------------|
-| **High Specificity** | `http Apache httpd 2.4.7` | Full exploit database search |
-| **Low Specificity** | `http` | Search operation suppressed |
-| **High Specificity** | `ssh OpenSSH 8.4` | Targeted exploit discovery |
-| **Generic Protocol** | `https` | Intelligent filtering applied |
-
-#### Enterprise Risk Classification Framework
-
-| Risk Category | Score Range | Remediation Timeline | Business Priority |
-|---------------|-------------|---------------------|------------------|
-| **CRITICAL** | 50+ | 24-48 hours | Immediate executive attention |
-| **HIGH** | 30-49 | 1-2 weeks | Management escalation required |
-| **MEDIUM** | 15-29 | 1-3 months | Scheduled remediation |
-| **LOW** | <15 | Ongoing monitoring | Standard maintenance |
-
-#### Professional Output Example
+### Sample Output
 ```
 ================================================================
-ENTERPRISE SECURITY ASSESSMENT REPORT
-================================================================
-Target: corporate-target.com
-Assessment Date: 2025-11-11
-Scanner: OxideScanner v1.0.1
-
-RISK CLASSIFICATION: CRITICAL
-Port: 80
-Service: http Apache httpd 2.4.7
-Risk Score: 136.5
-Exploits Identified: 17
-
-VULNERABILITY DETAILS:
+Port 80 | http Apache httpd 2.4.7 | Risk: 136.5 | 17 exploits
 ----------------------------------------------------------------
-[CRITICAL] Apache + PHP Remote Code Execution
-CVSS Score: 9.8
-Exploit Path: php/remote/29290.c
-Business Impact: Complete system compromise
+   [9.8] Apache + PHP Remote Code Execution
+    Path: php/remote/29290.c
 
-[HIGH] Apache Memory Information Leak
-CVSS Score: 8.1  
-Exploit Path: linux/web-apps/42745.py
-Business Impact: Information disclosure
-
-ASSESSMENT SUMMARY:
-- Total Vulnerabilities: 17
-- Critical Risk Services: 1
-- Services Analyzed: 1
-- Recommended Actions: Immediate remediation required
+   [8.1] Apache Memory Information Leak
+    Path: linux/web-apps/42745.py
+    ...
+    15 more exploits available
 ================================================================
+
+Summary:
+  Total exploits: 17
+  High-risk services: 1
+  Services analyzed: 1
 ```
 
-## Technical Architecture
+## Architecture
 
-### Enterprise System Design
-
-OxideScanner implements a modular, enterprise-grade architecture optimized for high-performance security operations:
+### System Design
 
 ```
-┌─────────────────────┐    ┌──────────────────────┐    ┌─────────────────────┐
-│   Port Scanner      │───▶│  Service Detector    │───▶│ Exploit Analyzer    │
-│                     │    │                      │    │                     │
-│ • Parallel TCP      │    │ • Nmap Integration   │    │ • Searchsploit DB   │
-│ • Thread Management │    │ • Version Analysis   │    │ • CVSS Assessment   │
-│ • Rate Limiting     │    │ • Product Analysis   │    │ • Risk Calculation  │
-└─────────────────────┘    └──────────────────────┘    └─────────────────────┘
-          │                         │                         │
-          ▼                         ▼                         ▼
-┌─────────────────────┐    ┌──────────────────────┐    ┌─────────────────────┐
-│   Output Engine     │    │   Reporting System   │    │   Integration API   │
-│                     │    │                      │    │                     │
-│ • Terminal Display  │    │ • JSON Export        │    │ • SIEM Integration  │
-│ • Progress Tracking │    │ • Risk Metrics       │    │ • API Endpoints     │
-│ • Status Reporting  │    │ • Service Inventory  │    │ • Automated Alerts  │
-└─────────────────────┘    └──────────────────────┘    └─────────────────────┘
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Port Scanner  │───▶│  Service Detector│───▶│ Exploit Finder  │
+│                 │    │                  │    │                 │
+│ • Parallel TCP  │    │ • Nmap integration│    │ • Searchsploit  │
+│ • Thread pools  │    │ • Version detection│    │ • CVSS scoring  │
+│ • Rate limiting │    │ • Product ID      │    │ • Risk analysis │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Formatter     │    │    Output        │    │   Reporting     │
+│                 │    │                  │    │                 │
+│ • Terminal UI   │    │ • Rich display   │    │ • JSON export   │
+│ • Progress bars │    │ • Color coding   │    │ • Risk metrics  │
+│ • Status updates│    │ • Summary stats  │    │ • Service info  │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-### Core System Components
+### Core Components
 
-- **Scanner Engine**: High-performance parallel port scanning with enterprise optimization
-- **Exploit Intelligence**: Advanced exploit database integration with CVSS-based risk assessment
-- **External Integration**: Professional nmap and searchsploit abstraction layers
-- **Utilities Suite**: Enterprise networking utilities and target resolution systems
+- **scanner** - High-performance parallel port scanning
+- **exploit** - Exploit database integration and risk scoring
+- **external** - Nmap and searchsploit tool abstractions
+- **utils** - Networking utilities and target resolution
 
-## Security & Compliance
+## Security & Ethics
 
-### Professional Security Guidelines
+### Important
+**Only scan systems you own or have explicit permission to test.**
 
-**Authorization Requirement**: All scanning activities must be conducted on systems owned by the organization or with explicit written authorization.
-
-### Enterprise Scanning Standards
-
-#### Responsible Operation Procedures
+### Responsible Scanning
 ```bash
-# Conservative scanning for production environments
-oxscan enterprise-target.com -10k --threads 4 --scan-timeout 100
+# Conservative scanning to avoid detection
+oxscan target.com -10k --threads 4 --scan-timeout 100
 
-# Rate-limited scanning for compliance requirements
-oxscan production-target.com -5k --threads 2 --enable-rate-limit
+# Rate-limited scanning for production environments
+oxscan target.com -5k --threads 2 --enable-rate-limit
 
-# Authorized penetration testing
-oxscan authorized-test-target.com --compliance-mode
+# Authorized testing only
+oxscan authorized-target.com --explicit-permission
 ```
 
-#### Regulatory Compliance
-- Obtain documented authorization before security testing
-- Implement appropriate rate limiting to respect system resources
-- Maintain comprehensive audit logs of all testing activities
-- Follow responsible disclosure procedures for identified vulnerabilities
+### Legal Guidelines
+- Get written authorization before scanning
+- Respect system resources and rate limits
+- Document all testing activities
+- Report vulnerabilities responsibly
 
-## Development & Maintenance
+## Development
 
-### Enterprise Build Process
+### Building from Source
 ```bash
-# Production Compilation
 git clone https://github.com/NotSmartMan/OxideScanner.git
 cd OxideScanner
 cargo build --release
-
-# Quality Assurance
-cargo test --release          # Comprehensive testing suite
-cargo fmt                     # Code formatting standards
-cargo clippy                  # Static analysis validation
 ```
 
-### Contribution Guidelines
-1. Repository fork and feature branch creation
-2. Comprehensive test coverage for all modifications
-3. Quality assurance: `cargo test && cargo fmt && cargo clippy`
-4. Detailed pull request documentation
-5. Enterprise-focused feature consideration
+### Running Tests
+```bash
+cargo test        # Run all tests
+cargo test --release  # Performance tests
+cargo fmt         # Code formatting
+cargo clippy      # Linting
+```
 
-## Performance Metrics
+### Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make changes with tests
+4. Run `cargo test && cargo fmt && cargo clippy`
+5. Submit pull request
 
-### Enterprise Performance Standards
+## Performance
 
-#### Scanning Performance
-- **1,000 ports**: 3 seconds (enterprise standard)
-- **10,000 ports**: 30 seconds (optimized for large networks)
-- **65,535 ports**: 200 seconds (comprehensive assessment)
+### Scanning Speed
+- **1,000 ports**: ~3 seconds
+- **10,000 ports**: ~30 seconds
+- **65,535 ports**: ~200 seconds
 
-#### Resource Utilization
-- **Baseline Memory**: 10MB (minimal enterprise footprint)
-- **Operational Memory**: 50-100MB (scalable for enterprise use)
-- **Peak Memory**: 200MB (large-scale enterprise deployments)
+### Memory Usage
+- **Idle**: ~10MB
+- **Scanning**: ~50-100MB
+- **Peak**: ~200MB (large port ranges)
 
-#### Exploit Analysis Performance
-- **Specific Service Analysis**: 1-5 seconds (actionable intelligence)
-- **Generic Service Filtering**: <1 second (efficient noise reduction)
-- **Enterprise Caching**: Optimized for large-scale operations
+### Exploit Search
+- **Specific services**: 1-5 seconds
+- **Generic services**: <1 second (skipped)
+- **Large ranges**: Optimized caching
 
-## Version History
+## Changelog
 
-### Enterprise Release Notes v1.0.1
-- **Enhanced** searchsploit integration with professional JSON parsing
-- **Implemented** intelligent query filtering for accurate vulnerability assessment
-- **Optimized** performance through advanced service specificity filtering
-- **Expanded** documentation with comprehensive enterprise examples
-- **Refined** codebase architecture and dependency management
+### v1.0.1 (2025-11-11)
+- Fixed searchsploit JSON parsing with correct field mappings
+- Added intelligent query filtering for targeted exploit search
+- Improved performance by filtering generic service queries
+- Enhanced documentation with comprehensive examples
+- Cleaned codebase and removed unused dependencies
 
-### Enterprise Release v1.0.0
-- Initial enterprise-grade port scanning implementation
-- Basic exploit database integration for vulnerability assessment
-- Professional output formatting and risk classification
+### v1.0.0
+- Initial release with basic port scanning and exploit integration
 
-## Licensing & Legal
+## License
 
-MIT License - Comprehensive terms and conditions available in [LICENSE](LICENSE) documentation.
+MIT License - see [LICENSE](LICENSE) for details.
 
-## Enterprise Support
+## Support
 
-- **Technical Support**: [GitHub Issues](https://github.com/NotSmartMan/OxideScanner/issues)
-- **Feature Requests**: [GitHub Discussions](https://github.com/NotSmartMan/OxideScanner/discussions)
-- **Documentation**: [Technical Documentation](https://docs.rs/oxidescanner)
+- **Issues**: [GitHub Issues](https://github.com/NotSmartMan/OxideScanner/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/NotSmartMan/OxideScanner/discussions)
+- **Documentation**: [docs.rs/oxidescanner](https://docs.rs/oxidescanner)
 
-## Contact Information
+## Author
 
-**Lead Developer**: 3xecutablefile  
-*Enterprise Security Solutions Architect*
+**3xecutablefile**  
+*Security Tool Developer*
 
-[![Professional GitHub](https://img.shields.io/badge/GitHub-Enterprise--Security-blue.svg)](https://github.com/NotSmartMan)
+[![GitHub](https://img.shields.io/badge/GitHub-NotSmartMan-blue.svg)](https://github.com/NotSmartMan)
 
 ---
 
 <div align="center">
 
-**Enterprise-Grade Security Assessment Platform**
+**Fast Port Scanning with Smart Exploit Discovery**
 
-[Professional Repository](https://github.com/NotSmartMan/OxideScanner) • [Issue Tracking](https://github.com/NotSmartMan/OxideScanner/issues) • [Feature Development](https://github.com/NotSmartMan/OxideScanner/discussions)
+[Star Repository](https://github.com/NotSmartMan/OxideScanner) • [Report Issues](https://github.com/NotSmartMan/OxideScanner/issues) • [Request Features](https://github.com/NotSmartMan/OxideScanner/discussions)
 
 </div>
