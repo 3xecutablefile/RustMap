@@ -28,7 +28,7 @@ cd OxideScanner
 
 ### Basic Usage
 ```bash
-# Quick scan (top 1000 ports)
+# Tool will ask you to enter amount of ports you want to scan
 oxscan target.com
 
 # Scan specific ranges
