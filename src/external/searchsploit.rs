@@ -1,4 +1,4 @@
-use crate::constants;
+
 use crate::error::{OxideScannerError, Result};
 use crate::external::{BaseTool, ExternalTool};
 use serde::{Deserialize, Serialize};
@@ -32,10 +32,6 @@ struct SearchsploitExploit {
 /// JSON response structure from searchsploit
 #[derive(Debug, Deserialize)]
 struct SearchsploitResponse {
-    #[serde(rename = "SEARCH")]
-    search: String,
-    #[serde(rename = "DB_PATH_EXPLOIT")]
-    db_path_exploit: String,
     #[serde(rename = "RESULTS_EXPLOIT")]
     results_exploit: Vec<SearchsploitExploit>,
 }
@@ -47,11 +43,7 @@ impl ExploitSearcher {
         Ok(ExploitSearcher { base_tool })
     }
 
-    pub async fn search_exploits(&self, query: &str, timeout: Option<Duration>) -> Result<Vec<Exploit>> {
-        let timeout =
-            timeout.unwrap_or(Duration::from_secs(constants::DEFAULT_EXPLOIT_TIMEOUT_SECS));
-        self.search_with_strategy(query, timeout).await
-    }
+
 
     /// Search with specific strategy
     pub async fn search_with_strategy(
@@ -195,47 +187,6 @@ impl ExternalTool for ExploitSearcher {
         "searchsploit"
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_extract_cvss() {
-        let searcher = ExploitSearcher::new().unwrap();
-
-        assert_eq!(searcher.extract_cvss("Remote Code Execution"), Some(9.8));
-        assert_eq!(searcher.extract_cvss("SQL Injection"), Some(8.1));
-        assert_eq!(searcher.extract_cvss("Some random exploit"), None);
-    }
-
-    #[test]
-    fn test_should_skip_line() {
-        let searcher = ExploitSearcher::new().unwrap();
-
-        assert!(searcher.should_skip_line("----"));
-        assert!(searcher.should_skip_line("Exploit Title | Path"));
-        assert!(searcher.should_skip_line(""));
-        assert!(searcher.should_skip_line("  # Comment"));
-        assert!(!searcher.should_skip_line("Some exploit title | /path/to/exploit"));
-    }
-
-    #[test]
-    fn test_parse_exploit_line() {
-        let searcher = ExploitSearcher::new().unwrap();
-
-        let line = "Test Exploit | /path/to/exploit.txt | Description";
-        let result = searcher.parse_exploit_line(line).unwrap().unwrap();
-
-        assert_eq!(result.title, "Test Exploit");
-        assert_eq!(result.path, "/path/to/exploit.txt | Description");
-        assert_eq!(
-            result.url,
-            "https://www.exploit-db.com/exploit | Description"
-        );
-    }
-}
-
 
 #[cfg(test)]
 mod tests {

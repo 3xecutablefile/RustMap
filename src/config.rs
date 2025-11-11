@@ -159,7 +159,7 @@ impl Config {
                     ))
                 })?;
 
-                let validated_ms = validation::validate_timeout_ms(timeout_ms)?;
+                let validated_ms = timeout_ms;
                 return Ok(Duration::from_millis(validated_ms));
             }
         }

@@ -35,16 +35,7 @@ impl Default for RetryConfig {
 }
 
 impl RetryConfig {
-    /// Create a new retry configuration
-    pub fn new(max_retries: u32, base_delay: Duration, max_delay: Duration) -> Self {
-        Self {
-            max_retries,
-            base_delay,
-            max_delay,
-            backoff_multiplier: 2.0,
-            jitter_factor: 0.1,
-        }
-    }
+
 
     /// Create retry configuration from environment variables
     pub fn from_env() -> Result<Self> {
@@ -97,12 +88,7 @@ impl RetryConfig {
         self
     }
 
-    /// Calculate delay for a specific retry attempt
-    pub fn calculate_delay(&self, _attempt: u32) -> Duration {
-        // Note: attempt parameter is intentionally unused in current implementation
-        // but kept for future exponential backoff calculations
-        self.base_delay
-    }
+
 }
 
 #[cfg(test)]

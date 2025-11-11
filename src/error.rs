@@ -63,8 +63,7 @@ pub enum OxideScannerError {
     #[error("Service detection failed: {0}")]
     ServiceDetection(String),
 
-    #[error("Exploit search failed: {0}")]
-    ExploitSearch(String),
+
 
     #[error("Target resolution failed: {0}")]
     TargetResolution(String),
@@ -104,10 +103,7 @@ impl OxideScannerError {
         Self::ServiceDetection(msg.into())
     }
 
-    /// Create a new exploit search error
-    pub fn exploit_search(msg: impl Into<String>) -> Self {
-        Self::ExploitSearch(msg.into())
-    }
+
 
     /// Create a new target resolution error
     pub fn target_resolution(msg: impl Into<String>) -> Self {

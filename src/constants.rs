@@ -84,58 +84,10 @@ pub mod service_multipliers {
 }
 
 /// CVSS score mappings for vulnerability types
-pub mod cvss {
-    /// Pre-authentication RCE
-    pub const PRE_AUTH_RCE: f32 = 10.0;
-    /// Remote code execution
-    pub const RCE: f32 = 9.8;
-    /// Authentication bypass (remote)
-    pub const AUTH_BYPASS_REMOTE: f32 = 9.8;
-    /// Blind SQL injection
-    pub const BLIND_SQLI: f32 = 8.9;
-    /// SQL injection
-    pub const SQLI: f32 = 8.1;
-    /// Remote buffer overflow
-    pub const REMOTE_BUFFER_OVERFLOW: f32 = 9.3;
-    /// Buffer overflow
-    pub const BUFFER_OVERFLOW: f32 = 8.5;
-    /// File upload with RCE
-    pub const FILE_UPLOAD_RCE: f32 = 9.8;
-    /// File upload
-    pub const FILE_UPLOAD: f32 = 8.9;
-    /// Root privilege escalation
-    pub const ROOT_PRIV_ESC: f32 = 8.8;
-    /// Privilege escalation
-    pub const PRIV_ESC: f32 = 7.8;
-    /// Remote command injection
-    pub const REMOTE_CMD_INJECTION: f32 = 9.0;
-    /// Command injection
-    pub const CMD_INJECTION: f32 = 8.6;
-    /// Remote deserialization
-    pub const REMOTE_DESERIALIZATION: f32 = 8.5;
-    /// Root directory traversal
-    pub const ROOT_DIR_TRAVERSAL: f32 = 7.5;
-    /// Directory traversal
-    pub const DIR_TRAVERSAL: f32 = 6.8;
-    /// Stored XSS
-    pub const STORED_XSS: f32 = 7.5;
-    /// Cross-site scripting
-    pub const XSS: f32 = 6.1;
-    /// Cross-site request forgery
-    pub const CSRF: f32 = 6.5;
-    /// Server-side request forgery
-    pub const SSRF: f32 = 7.5;
-    /// Denial of service
-    pub const DOS: f32 = 5.3;
-    /// Sensitive information disclosure
-    pub const SENSITIVE_INFO_DISCLOSURE: f32 = 5.5;
-    /// Information disclosure
-    pub const INFO_DISCLOSURE: f32 = 4.3;
-    /// Brute force
-    pub const BRUTE_FORCE: f32 = 5.0;
-    /// Clickjacking
-    pub const CLICKJACKING: f32 = 4.3;
-}
+/// 
+/// This module is reserved for future CVSS scoring implementations.
+/// Currently, the scanner uses a simpler risk scoring system based on
+/// service types and exploit availability.
 
 /// Port scanning limits
 pub mod ports {
