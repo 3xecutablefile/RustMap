@@ -1,9 +1,9 @@
 [package]
 name = "oxidescanner"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["3xecutablefile"]
-description = "Fast port scanner and exploit finder written in Rust"
+description = "Fast port scanner with intelligent exploit discovery - Fixed searchsploit integration"
 license = "MIT"
 keywords = ["security", "scanner", "network", "exploit", "port-scanner"]
 categories = ["command-line-utilities", "network-programming"]

@@ -9,10 +9,18 @@ A high-performance network security scanner that combines fast port scanning wit
 
 - **Lightning-fast port scanning** - Parallel TCP scanning with configurable thread pools
 - **Service detection** - Automatic service fingerprinting via nmap
-- **Exploit discovery** - Built-in searchsploit integration for finding exploits
+- **Intelligent exploit discovery** - Searchsploit integration with smart query filtering
 - **Risk assessment** - CVSS-based scoring with service-specific multipliers
 - **Multiple output formats** - Rich terminal UI and JSON export
 - **Rate limiting** - Configurable to avoid detection
+
+## What's New
+
+### v1.0.1 - Intelligent Query Filtering
+- **Fixed searchsploit integration** - Now only searches when service-specific information is available
+- **No more false positives** - Generic services like "http" and "https" are intelligently skipped
+- **Real exploit data** - Displays actual searchsploit results instead of thousands of irrelevant exploits
+- **Better performance** - Reduced search times by filtering out generic queries
 
 ## Quick Start
 
@@ -101,6 +109,23 @@ oxscan target.com -20k --json > results.json
 
 ## Understanding Results
 
+OxideScanner now uses intelligent query filtering to provide accurate exploit analysis:
+
+### Intelligent Exploit Searching
+- **Service-Specific Search**: Only searches exploit databases when meaningful service information is detected
+- **Skips Generic Services**: Services like "http" and "https" without product details are marked as "No exploits found"
+- **Targeted Queries**: Searches for specific products like "Apache 2.4.7" instead of generic terms
+
+### Example Behavior
+```bash
+# Google.com - generic services
+Port 80: http → "SUCCESS No exploits found for detected services"
+
+# scanme.nmap.org - specific service
+Port 80: http Apache httpd 2.4.7 → 17 real exploits found
+```
+
+### Risk Assessment
 OxideScanner assigns risk scores based on:
 - Number of available exploits
 - CVSS severity scores

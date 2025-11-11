@@ -16,7 +16,8 @@ print_info() { echo -e "${BLUE}ℹ${NC} $1"; }
 print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}   OxideScanner Installation             ${NC}"
+echo -e "${BLUE}   OxideScanner Installation v1.0.1     ${NC}"
+echo -e "${BLUE}   Intelligent Exploit Discovery        ${NC}"
 echo -e "${BLUE}========================================${NC}"
 
 # Check if we're in the right directory
@@ -107,7 +108,8 @@ else
 fi
 
 # Build OxideScanner
-print_info "Building OxideScanner..."
+print_info "Building OxideScanner v1.0.1..."
+print_info "Features: Intelligent query filtering + Real exploit data"
 cargo build --release
 print_success "Build complete"
 
@@ -130,10 +132,14 @@ cmd_exists searchsploit && print_success "searchsploit" || print_warning "search
 
 if cmd_exists oxscan; then
     print_success "oxscan (system)"
-    VERSION=$(oxscan --help 2>/dev/null | head -1 || echo "unknown")
     echo -e "\n${GREEN}Ready to scan!${NC}"
     echo "  oxscan scanme.nmap.org"
     echo "  oxscan scanme.nmap.org -5k --json"
+    echo ""
+    echo "${BLUE}New in v1.0.1:${NC}"
+    echo "  ✨ Intelligent exploit search - No more false positives"
+    echo "  🎯 Only searches when specific service info is available"
+    echo "  ⚡ Real searchsploit data instead of thousands of irrelevant results"
 else
     print_success "oxscan (local)"
     echo -e "\n${GREEN}Ready to scan!${NC}"

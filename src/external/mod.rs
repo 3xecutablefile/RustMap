@@ -52,6 +52,7 @@ pub trait ExternalTool {
 }
 
 /// Base implementation for external tool execution
+#[derive(Debug)]
 pub struct BaseTool {
     pub name: &'static str,
     pub binary_path: String,
