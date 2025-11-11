@@ -7,9 +7,7 @@
 
 set -e  # Exit on any error
 
-# Track if we're in a git repository for cleanup purposes
-REPO_PATH=$(pwd)
-REPO_NAME=$(basename "$REPO_PATH")
+
 
 # Colors for output
 RED='\033[0;31m'
@@ -191,13 +189,13 @@ if ! command_exists searchsploit; then
     fi
 fi
 
-# Update searchsploit database
-print_info "Updating searchsploit database..."
-if command_exists searchsploit; then
-    searchsploit --update >/dev/null 2>&1 || print_warning "Searchsploit update failed (this is normal on first run)"
-    print_success "Searchsploit database updated"
+# Final check - searchsploit must be available
+if ! command_exists searchsploit; then
+    print_error "Searchsploit installation failed - this is required for exploit functionality"
+    print_info "Please install searchsploit manually and ensure it's in your PATH"
+    exit 1
 else
-    print_warning "Searchsploit not available - exploit functionality will be limited"
+    print_success "Searchsploit installed and configured successfully"
 fi
 
 # Build OxideScanner
@@ -225,22 +223,18 @@ fi
 
 # Verify installation
 print_info "Verifying installation..."
-INSTALLATION_SUCCESS=false
 
 if command_exists oxscan; then
     OXIDESCANNER_VERSION=$(oxscan --help 2>/dev/null | head -n 1 || echo "version unknown")
     print_success "OxideScanner installed successfully!"
     print_info "Version: $OXIDESCANNER_VERSION"
-    INSTALLATION_SUCCESS=true
 else
     # Try local binary
     if [ -f "target/release/oxscan" ]; then
         print_success "OxideScanner built successfully (local binary: target/release/oxscan)"
         print_info "Add $(pwd)/target/release to your PATH or copy the binary to a directory in PATH"
-        INSTALLATION_SUCCESS=true
     else
         print_error "OxideScanner installation verification failed"
-        INSTALLATION_SUCCESS=false
     fi
 fi
 
@@ -267,24 +261,6 @@ echo -e "\n${YELLOW}Requirements Check:${NC}"
 echo -n "  Nmap: "; command_exists nmap && print_success "✓" || print_error "✗"
 echo -n "  Searchsploit: "; command_exists searchsploit && print_success "✓" || print_warning "✗ (limited functionality)"
 echo -n "  OxideScanner: "; command_exists oxscan && print_success "✓" || print_success "✓ (local binary)"
-
-# Auto-cleanup: only if installation was successful
-if [ "$INSTALLATION_SUCCESS" = true ]; then
-    echo -e "\n${BLUE}Auto-cleanup:${NC}"
-    print_info "Cleaning up source repository..."
-    cd ..
-    if rm -rf "$REPO_NAME"; then
-        print_success "Repository deleted successfully"
-        print_info "OxideScanner will continue to work from system PATH"
-        print_info "Current directory is now: $(pwd)"
-    else
-        print_warning "Could not delete repository (permission issue)"
-        print_info "You can manually delete it with: rm -rf $REPO_NAME"
-    fi
-else
-    print_warning "Installation did not complete successfully - repository not deleted"
-    print_info "Please check the errors above and try again if needed"
-fi
 
 print_info "For more information, check the README.md file"
 print_info "Made by: 3xecutablefile"
