@@ -17,7 +17,7 @@
 
 ## Overview
 
-CinderScan is a cutting-edge network security tool that combines lightning-fast port scanning with intelligent exploit discovery. Built in Rust for maximum performance and reliability, it provides security researchers and penetration testers with a comprehensive reconnaissance solution.
+OxideScanner is a cutting-edge network security tool that combines lightning-fast port scanning with intelligent exploit discovery. Built in Rust for maximum performance and reliability, it provides security researchers and penetration testers with a comprehensive reconnaissance solution.
 
 ### Key Capabilities
 
