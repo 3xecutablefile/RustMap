@@ -203,7 +203,7 @@ impl ProgressReporter {
 /// }
 /// ```
 pub async fn fast_scan(target_addrs: &[SocketAddr], config: &Config) -> Result<Vec<Port>> {
-    let ports: Vec<u16> = utils::get_port_list(config.port_limit);
+    let ports: Vec<u16> = utils::get_port_list_from_config(config);
     let total = ports.len();
 
     if total == 0 {

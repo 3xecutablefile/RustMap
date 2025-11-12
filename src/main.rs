@@ -19,6 +19,124 @@ use colored::*;
 use error::{OxideScannerError, Result};
 use std::env;
 use std::process;
+use std::process::Command;
+
+/// Update OxideScanner to the latest version
+async fn update_oxscan() -> Result<()> {
+    println!("{} Updating OxideScanner...", "UPDATE".bright_yellow());
+    
+    // Check if we're in a git repository
+    let git_check = Command::new("git")
+        .args(&["rev-parse", "--git-dir"])
+        .output();
+    
+    match git_check {
+        Ok(output) if output.status.success() => {
+            // Verify that we're in the OxideScanner repository
+            let remote_url_output = Command::new("git")
+                .args(&["remote", "get-url", "origin"])
+                .output()
+                .map_err(|e| OxideScannerError::external_tool("git", format!("Failed to get remote URL: {}", e)))?;
+
+            if !remote_url_output.status.success() {
+                return Err(OxideScannerError::external_tool(
+                    "git",
+                    format!("Failed to get remote URL: {}", String::from_utf8_lossy(&remote_url_output.stderr))
+                ));
+            }
+
+            let remote_url = String::from_utf8_lossy(&remote_url_output.stdout).trim().to_lowercase();
+            let expected_urls = [
+                "https://github.com/notsmartman/oxidescanner.git",
+                "https://github.com/3xecutablefile/oxidescanner.git", 
+                "git@github.com:notsmartman/oxidescanner.git",
+                "git@github.com:3xecutablefile/oxidescanner.git"
+            ];
+
+            if !expected_urls.iter().any(|&url| remote_url.contains(&url.to_lowercase())) {
+                return Err(OxideScannerError::external_tool(
+                    "git",
+                    format!("Current directory is not the OxideScanner repository. Remote URL: {}", remote_url)
+                ));
+            }
+
+            println!("{} Git repository verified as OxideScanner, pulling latest changes...", "INFO".bright_cyan());
+
+            // Pull latest changes
+            let pull_output = Command::new("git")
+                .args(&["pull", "origin", "main"])
+                .output()
+                .map_err(|e| OxideScannerError::external_tool("git", format!("Failed to run git pull: {}", e)))?;
+
+            if !pull_output.status.success() {
+                return Err(OxideScannerError::external_tool(
+                    "git",
+                    format!("Git pull failed: {}", String::from_utf8_lossy(&pull_output.stderr))
+                ));
+            }
+
+            println!("{} Successfully pulled latest changes", "SUCCESS".bright_green());
+        }
+        _ => {
+            println!("{} Not a git repository, cloning latest version...", "INFO".bright_cyan());
+            
+            // Clone the repository
+            let clone_output = Command::new("git")
+                .args(&[
+                    "clone",
+                    "https://github.com/NotSmartMan/OxideScanner.git",
+                    "/tmp/OxideScanner-update"
+                ])
+                .output()
+                .map_err(|e| OxideScannerError::external_tool("git", format!("Failed to clone repository: {}", e)))?;
+            
+            if !clone_output.status.success() {
+                return Err(OxideScannerError::external_tool(
+                    "git",
+                    format!("Git clone failed: {}", String::from_utf8_lossy(&clone_output.stderr))
+                ));
+            }
+            
+            println!("{} Successfully cloned latest version to /tmp/OxideScanner-update", "SUCCESS".bright_green());
+            println!("{} Please manually copy the updated files to your OxideScanner directory", "INFO".bright_cyan());
+        }
+    }
+    
+    // Update Rust dependencies
+    println!("{} Updating Rust dependencies...", "INFO".bright_cyan());
+    let cargo_update_output = Command::new("cargo")
+        .arg("update")
+        .output()
+        .map_err(|e| OxideScannerError::external_tool("cargo", format!("Failed to run cargo update: {}", e)))?;
+    
+    if !cargo_update_output.status.success() {
+        return Err(OxideScannerError::external_tool(
+            "cargo",
+            format!("Cargo update failed: {}", String::from_utf8_lossy(&cargo_update_output.stderr))
+        ));
+    }
+    
+    println!("{} Dependencies updated successfully", "SUCCESS".bright_green());
+    
+    // Rebuild the project
+    println!("{} Rebuilding OxideScanner...", "INFO".bright_cyan());
+    let cargo_build_output = Command::new("cargo")
+        .args(&["build", "--release"])
+        .output()
+        .map_err(|e| OxideScannerError::external_tool("cargo", format!("Failed to build project: {}", e)))?;
+    
+    if !cargo_build_output.status.success() {
+        return Err(OxideScannerError::external_tool(
+            "cargo",
+            format!("Build failed: {}", String::from_utf8_lossy(&cargo_build_output.stderr))
+        ));
+    }
+    
+    println!("{} OxideScanner updated and rebuilt successfully!", "SUCCESS".bright_green());
+    println!("{} You can now use the updated version", "INFO".bright_cyan());
+    
+    Ok(())
+}
 
 /// Application entry point
 #[tokio::main]
@@ -27,6 +145,15 @@ async fn main() {
 
     if args.len() < 2 || args[1] == "--help" || args[1] == "-h" {
         print_usage();
+        process::exit(0);
+    }
+
+    // Handle --update flag
+    if args[1] == "--update" {
+        if let Err(e) = update_oxscan().await {
+            eprintln!("{} {}", "ERROR".red().bold(), e);
+            process::exit(1);
+        }
         process::exit(0);
     }
 
@@ -48,28 +175,27 @@ async fn main() {
 fn print_usage() {
     eprintln!(
         "{}",
-        "usage: oxscan <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N]"
+        "usage: oxscan <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N|--threads:N] [--update]"
             .red()
             .bold()
     );
     eprintln!("Port Options:");
-    eprintln!("  -Nk                 Scan N*1000 ports (e.g., -1k=1000, -5k=5000, -30k=30000)");
-    eprintln!("  -N                  Scan N ports directly (e.g., -1000, -5000)");
-    eprintln!("  --ports N           Scan N ports (e.g., --ports 1000)");
-    eprintln!("  (no flag)           Scan top 1000 ports (most common)");
+    eprintln!("  --ports:START-END  Scan port range (e.g., --ports:1000-30000)");
+    eprintln!("  --ports N           Scan N ports from top (e.g., --ports 1000)");
+    eprintln!("  (no flag)           Interactively choose port count");
     eprintln!("Other Options:");
     eprintln!("  --json              Output in JSON format");
     eprintln!("  --scan-timeout MS   TCP connection timeout in milliseconds (default: 25)");
     eprintln!("  --exploit-timeout MS Exploit search timeout in milliseconds (default: 10000)");
     eprintln!("  --threads N         Number of threads to use (default: all cores)");
+    eprintln!("  --threads:N         Number of threads to use (default: all cores)");
+    eprintln!("  --update            Update OxideScanner to latest version");
     eprintln!("Examples:");
-    eprintln!("  oxscan 127.0.0.1                    # Scan top 1000 ports");
-    eprintln!("  oxscan example.com -1k              # Scan top 1000 ports");
-    eprintln!("  oxscan example.com -5k              # Scan top 5000 ports");
-    eprintln!("  oxscan example.com -500             # Scan first 500 ports");
-    eprintln!("  oxscan example.com --ports 1000     # Scan 1000 ports");
-    eprintln!("  oxscan example.com -65535           # Scan all ports");
+    eprintln!("  oxscan scanme.nmap.org               # Interactively choose ports");
+    eprintln!("  oxscan example.com --ports:1000-30000 --threads:6  # Scan range with 6 threads");
+    eprintln!("  oxscan example.com --ports 1000     # Scan top 1000 ports");
     eprintln!("  oxscan 192.168.1.1 --json          # Output in JSON format");
+    eprintln!("  oxscan --update                     # Update to latest version");
 }
 
 /// Main application logic
@@ -115,14 +241,18 @@ async fn run(config: config::Config) -> Result<()> {
 
 /// Print scan start message
 fn print_scan_start(config: &config::Config) {
+    let port_description = if let (Some(start), Some(end)) = (config.port_start, config.port_end) {
+        format!("ports {}-{}", start, end)
+    } else if config.port_limit == constants::ports::MAX {
+        "all ports".to_string()
+    } else {
+        format!("top {} ports", config.port_limit)
+    };
+
     println!(
-        "{} Fast scanning {} ports on {}...",
+        "{} Fast scanning {} on {}...",
         "FAST SCAN".bright_yellow(),
-        if config.port_limit == constants::ports::MAX {
-            "all".to_string()
-        } else {
-            format!("top {}", config.port_limit)
-        },
+        port_description,
         config.target
     );
 }

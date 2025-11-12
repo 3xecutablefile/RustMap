@@ -43,8 +43,12 @@ pub struct Config {
     pub target: String,
     /// Output in JSON format
     pub json_mode: bool,
-    /// Maximum port number to scan
+    /// Maximum port number to scan (for backward compatibility)
     pub port_limit: u16,
+    /// Port range start (for new range format)
+    pub port_start: Option<u16>,
+    /// Port range end (for new range format)
+    pub port_end: Option<u16>,
     /// TCP connection timeout
     pub scan_timeout: Duration,
     /// Exploit search timeout
@@ -82,18 +86,18 @@ impl Config {
         // Parse boolean flags
         let json_mode = args.contains(&"--json".to_string());
 
-        // Parse port limit
-        let port_limit = if args
-            .iter()
-            .any(|arg| arg.starts_with('-') && arg.ends_with('k'))
-        {
-            Self::parse_port_limit_flag(args)?
+// Parse port limit or range
+        let (port_limit, port_start, port_end) = if let Some((start, end)) = Self::parse_port_range_flag(args)? {
+            // New format: --ports:1000-30000
+            (0, Some(start), Some(end))
         } else if let Some(limit) = Self::parse_numeric_port_flag(args)? {
-            limit
+            // --ports N format
+            (limit, None, None)
         } else {
             // Always prompt for port count when no port specification is given
             // This provides better user experience
-            Self::prompt_port_limit()?
+            let limit = Self::prompt_port_limit()?;
+            (limit, None, None)
         };
 
         // Parse optional timeout arguments
@@ -126,6 +130,8 @@ impl Config {
             target,
             json_mode,
             port_limit,
+            port_start,
+            port_end,
             scan_timeout,
             exploit_timeout,
             threads,
@@ -166,7 +172,7 @@ impl Config {
         Ok(Duration::from_millis(default_ms))
     }
 
-    /// Parse port limit from numeric flags (e.g., -1000 or --ports 1000)
+    /// Parse port limit from --ports N format
     fn parse_numeric_port_flag(args: &[String]) -> Result<Option<u16>> {
         // Check for --ports flag
         for (i, arg) in args.iter().enumerate() {
@@ -191,46 +197,50 @@ impl Config {
             }
         }
 
-        // Check for direct numeric flags like -1000
-        for arg in args {
-            if arg.starts_with('-') && arg.len() > 1 {
-                // Check if it's a pure number after the dash
-                let num_str = &arg[1..];
-                if let Ok(num) = num_str.parse::<u16>() {
-                    if num >= 1 {
-                        return Ok(Some(num));
-                    }
-                }
-            }
-        }
-
         Ok(None)
     }
 
-    /// Parse port limit from -k flag (e.g., -5k for 5000 ports)
-    fn parse_port_limit_flag(args: &[String]) -> Result<u16> {
+    /// Parse port range from --ports:START-END format
+    fn parse_port_range_flag(args: &[String]) -> Result<Option<(u16, u16)>> {
         for arg in args {
-            if arg.starts_with('-') && arg.ends_with('k') {
-                let num_str = &arg[1..arg.len() - 1];
-                if let Ok(num) = num_str.parse::<u16>() {
-                    if (1..=constants::ports::MAX_K_VALUE).contains(&num) {
-                        return Ok(num * constants::ports::DEFAULT_LIMIT);
-                    } else {
-                        return Err(OxideScannerError::config(format!(
-                            "Port limit must be between 1k and {}k",
-                            constants::ports::MAX_K_VALUE
-                        )));
-                    }
-                } else {
+            if arg.starts_with("--ports:") {
+                let range_str = &arg[8..]; // Remove "--ports:" prefix
+                let parts: Vec<&str> = range_str.split('-').collect();
+                
+                if parts.len() != 2 {
+                    return Err(OxideScannerError::config(
+                        "Invalid port range format. Use --ports:START-END (e.g., --ports:1000-30000)"
+                    ));
+                }
+                
+                let start = parts[0].parse::<u16>().map_err(|_| {
+                    OxideScannerError::config(format!("Invalid start port: {}", parts[0]))
+                })?;
+                
+                let end = parts[1].parse::<u16>().map_err(|_| {
+                    OxideScannerError::config(format!("Invalid end port: {}", parts[1]))
+                })?;
+                
+                if start < 1 || end > constants::ports::MAX {
                     return Err(OxideScannerError::config(format!(
-                        "Invalid port limit format: {}",
-                        arg
+                        "Port range must be between 1 and {}",
+                        constants::ports::MAX
                     )));
                 }
+                
+                if start > end {
+                    return Err(OxideScannerError::config(
+                        "Start port must be less than or equal to end port"
+                    ));
+                }
+                
+                return Ok(Some((start, end)));
             }
         }
-        Ok(constants::ports::MAX)
+        Ok(None)
     }
+
+    
 
     /// Prompt user for port limit interactively
     fn prompt_port_limit() -> Result<u16> {
@@ -262,8 +272,25 @@ impl Config {
         }
     }
 
-    /// Parse thread count argument
+    /// Parse thread count argument (supports both --threads N and --threads:N formats)
     fn parse_thread_arg(args: &[String], default: usize) -> Result<usize> {
+        // Check for --threads:N format first
+        for arg in args {
+            if arg.starts_with("--threads:") {
+                let threads_str = &arg[10..]; // Remove "--threads:" prefix
+                let threads = threads_str.parse::<usize>().map_err(|_| {
+                    OxideScannerError::config(format!("Invalid thread count: {}", threads_str))
+                })?;
+
+                if threads == 0 {
+                    return Ok(num_cpus::get());
+                }
+
+                return Ok(threads);
+            }
+        }
+
+        // Check for --threads N format
         for (i, arg) in args.iter().enumerate() {
             if arg == "--threads" {
                 if i + 1 >= args.len() {
@@ -281,6 +308,7 @@ impl Config {
                 return Ok(threads);
             }
         }
+        
         Ok(if default == 0 {
             num_cpus::get()
         } else {
@@ -351,6 +379,8 @@ impl Config {
             target: String::new(), // Will be set from command line
             json_mode: false,
             port_limit: 1000, // Default to top 1000 ports instead of all
+            port_start: None,
+            port_end: None,
             scan_timeout: Duration::from_millis(constants::DEFAULT_SCAN_TIMEOUT_MS),
             exploit_timeout: Duration::from_secs(constants::DEFAULT_EXPLOIT_TIMEOUT_SECS),
             threads,

@@ -95,10 +95,6 @@ pub mod ports {
     pub const MAX: u16 = 65535;
     /// Minimum port number
     pub const MIN: u16 = 1;
-    /// Default port limit when using -k flags
-    pub const DEFAULT_LIMIT: u16 = 1000;
-    /// Maximum k value for port limits (30k = 30000)
-    pub const MAX_K_VALUE: u16 = 30;
 }
 
 /// Progress bar settings

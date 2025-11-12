@@ -102,9 +102,17 @@ pub fn resolve_target(target: &str) -> Result<Vec<SocketAddr>> {
     }
 }
 
-/// Generate a list of ports to scan
-pub fn get_port_list(limit: u16) -> Vec<u16> {
-    let validated_limit = validation::validate_port_limit(limit).unwrap_or(limit);
+
+
+/// Generate a list of ports to scan based on configuration
+pub fn get_port_list_from_config(config: &crate::config::Config) -> Vec<u16> {
+    // If we have a port range, use it
+    if let (Some(start), Some(end)) = (config.port_start, config.port_end) {
+        return (start..=end).collect();
+    }
+    
+    // Otherwise, use the legacy port_limit
+    let validated_limit = validation::validate_port_limit(config.port_limit).unwrap_or(config.port_limit);
 
     if validated_limit == constants::ports::MAX {
         (constants::ports::MIN..=constants::ports::MAX).collect()

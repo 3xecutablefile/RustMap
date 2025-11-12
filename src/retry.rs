@@ -35,7 +35,16 @@ impl Default for RetryConfig {
 }
 
 impl RetryConfig {
-
+    /// Create a new retry configuration with specified parameters
+    pub fn new(max_retries: u32, base_delay: Duration, max_delay: Duration) -> Self {
+        Self {
+            max_retries,
+            base_delay,
+            max_delay,
+            backoff_multiplier: 2.0,
+            jitter_factor: 0.1,
+        }
+    }
 
     /// Create retry configuration from environment variables
     pub fn from_env() -> Result<Self> {
