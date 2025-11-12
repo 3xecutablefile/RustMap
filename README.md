@@ -51,6 +51,9 @@ oxscan target.com --ports 1000
 # JSON output for scripts
 oxscan target.com --ports 5000 --json > results.json
 
+# Save results to file
+oxscan target.com --ports 5000 --output results.txt
+
 # Update to latest version
 oxscan --update
 ```
@@ -101,6 +104,8 @@ oxscan <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout M
 | `--threads N` | Worker threads | `--threads 8` |
 | `--threads:N` | Worker threads (compact) | `--threads:6` |
 | `--json` | JSON output | `--json` |
+| `--output FILE` | Save results to specified file | `--output results.txt` |
+| `-o FILE` | Shorthand for --output | `-o results.txt` |
 | `--scan-timeout MS` | TCP connection timeout | `--scan-timeout 50` |
 | `--exploit-timeout MS` | Exploit search timeout | `--exploit-timeout 15000` |
 | `--update` | Update to latest version | `--update` |

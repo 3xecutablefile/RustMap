@@ -20,6 +20,7 @@ use error::{OxideScannerError, Result};
 use std::env;
 use std::process;
 use std::process::Command;
+use crate::exploit::PortResult;
 
 /// Update OxideScanner to the latest version
 async fn update_oxscan() -> Result<()> {
@@ -80,12 +81,21 @@ async fn update_oxscan() -> Result<()> {
         _ => {
             println!("{} Not a git repository, cloning latest version...", "INFO".bright_cyan());
             
-            // Clone the repository
+            // Create a unique temporary directory to prevent symlink attacks
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| OxideScannerError::external_tool("update", format!("Failed to generate timestamp: {}", e)))?
+                .as_secs();
+            
+            let temp_dir = format!("/tmp/oxscan-update-{}", timestamp);
+            
+            // Clone the repository to the unique temporary directory
             let clone_output = Command::new("git")
                 .args(&[
                     "clone",
                     "https://github.com/NotSmartMan/OxideScanner.git",
-                    "/tmp/OxideScanner-update"
+                    &temp_dir
                 ])
                 .output()
                 .map_err(|e| OxideScannerError::external_tool("git", format!("Failed to clone repository: {}", e)))?;
@@ -97,7 +107,7 @@ async fn update_oxscan() -> Result<()> {
                 ));
             }
             
-            println!("{} Successfully cloned latest version to /tmp/OxideScanner-update", "SUCCESS".bright_green());
+            println!("{} Successfully cloned latest version to {}", "SUCCESS".bright_green(), temp_dir);
             println!("{} Please manually copy the updated files to your OxideScanner directory", "INFO".bright_cyan());
         }
     }
@@ -239,7 +249,7 @@ async fn main() {
 fn print_usage() {
     eprintln!(
         "{}",
-        "usage: oxscan <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout MS] [--threads N|--threads:N] [--update]"
+        "usage: oxscan <target> [port-options] [--json] [--output FILE|-o FILE] [--scan-timeout MS] [--exploit-timeout MS] [--threads N|--threads:N] [--update]"
             .red()
             .bold()
     );
@@ -249,6 +259,8 @@ fn print_usage() {
     eprintln!("  (no flag)           Interactively choose port count");
     eprintln!("Other Options:");
     eprintln!("  --json              Output in JSON format");
+    eprintln!("  --output FILE       Save results to specified file");
+    eprintln!("  -o FILE             Shorthand for --output");
     eprintln!("  --scan-timeout MS   TCP connection timeout in milliseconds (default: 25)");
     eprintln!("  --exploit-timeout MS Exploit search timeout in milliseconds (default: 10000)");
     eprintln!("  --threads N         Number of threads to use (default: all cores)");
@@ -259,6 +271,7 @@ fn print_usage() {
     eprintln!("  oxscan example.com --ports:1000-30000 --threads:6  # Scan range with 6 threads");
     eprintln!("  oxscan example.com --ports 1000     # Scan top 1000 ports");
     eprintln!("  oxscan 192.168.1.1 --json          # Output in JSON format");
+    eprintln!("  oxscan target.com --output results.txt  # Save results to file");
     eprintln!("  oxscan --update                     # Update to latest version");
 }
 
@@ -327,15 +340,163 @@ fn output_results(
     ports: &[scanner::Port],
     config: &config::Config,
 ) -> Result<()> {
-    if config.json_mode {
-        let json_output = serde_json::to_string_pretty(results)
-            .map_err(|e| OxideScannerError::parse(format!("Failed to serialize JSON: {}", e)))?;
-        println!("{}", json_output);
+    if let Some(ref output_file) = config.output_file {
+        // Write to specified file
+        use std::fs::File;
+        use std::io::Write;
+        
+        let mut file = File::create(output_file)
+            .map_err(|e| OxideScannerError::Io(e))?;
+        
+        if config.json_mode {
+            let json_output = serde_json::to_string_pretty(results)
+                .map_err(|e| OxideScannerError::parse(format!("Failed to serialize JSON: {}", e)))?;
+            file.write_all(json_output.as_bytes())
+                .map_err(|e| OxideScannerError::Io(e))?;
+        } else {
+            // Capture the printed results to write to file
+            let output = format_output_results(results, ports)?;
+            file.write_all(output.as_bytes())
+                .map_err(|e| OxideScannerError::Io(e))?;
+        }
+        
+        if !config.json_mode {
+            // Still print to console for non-JSON mode
+            exploit::print_results(results, ports);
+        }
+        
+        println!("{} Results saved to {}", "INFO".bright_cyan(), output_file);
     } else {
-        exploit::print_results(results, ports);
+        // Original behavior - print to stdout
+        if config.json_mode {
+            let json_output = serde_json::to_string_pretty(results)
+                .map_err(|e| OxideScannerError::parse(format!("Failed to serialize JSON: {}", e)))?;
+            println!("{}", json_output);
+        } else {
+            exploit::print_results(results, ports);
+        }
     }
 
     Ok(())
+}
+
+/// Format results as string for file output (non-JSON mode)
+fn format_output_results(
+    results: &[exploit::PortResult],
+    ports: &[scanner::Port],
+) -> Result<String> {
+    if !results.is_empty() {
+        let mut output = String::new();
+        output.push_str("\nEXPLOIT ANALYSIS Results:\n");
+        
+        for result in results {
+            let formatted_result = format_single_result_as_string(result)?;
+            output.push_str(&formatted_result);
+            output.push('\n');
+        }
+        
+        // Add summary
+        let total_exploits: usize = results.iter().map(|r| r.exploits.len()).sum();
+        let high_risk_count = results.iter().filter(|r| r.is_high_risk()).count();
+        
+        output.push_str("\nSUMMARY:\n");
+        output.push_str(&format!("  Total exploits found: {}\n", total_exploits));
+        output.push_str(&format!("  High-risk services: {}\n", high_risk_count));
+        output.push_str(&format!("  Services analyzed: {}\n", results.len()));
+        
+        Ok(output)
+    } else {
+        // If no exploits found, use the same format as the print function
+        let mut output = String::from("\nSUCCESS No exploits found for detected services.\n");
+        
+        if !ports.is_empty() {
+            output.push_str("\nSECURE SERVICES:\n");
+            for port in ports {
+                let service_info = if !port.product.is_empty() {
+                    format!(
+                        "{} {} {}",
+                        port.service,
+                        port.product,
+                        port.version
+                    )
+                } else {
+                    port.service.clone()
+                };
+                output.push_str(&format!("  Port {}: {}\n", port.port, service_info));
+            }
+        }
+        
+        Ok(output)
+    }
+}
+
+/// Format a single port result as string for file output
+fn format_single_result_as_string(result: &PortResult) -> Result<String> {
+    let port = &result.port;
+    let exploits = &result.exploits;
+    
+    let service_info = if !port.product.is_empty() {
+        format!(
+            "{} {} {}",
+            port.service,
+            port.product,
+            port.version
+        )
+    } else {
+        port.service.clone()
+    };
+    
+    let header = format!(
+        "Port {} | {} | Risk: {:.1} | {} exploits",
+        port.port,
+        service_info,
+        result.risk_score,
+        exploits.len()
+    );
+    
+    let mut output = String::new();
+    output.push_str(&format!("\n{}", "=".repeat(header.len() + 8)));
+    output.push_str(&format!("\nRISK: {} | {}\n", result.risk_level().display(), header));
+    output.push_str(&format!("{}\n", "-".repeat(header.len() + 8)));
+    
+    if exploits.is_empty() {
+        output.push_str("  SUCCESS No exploits found\n");
+    } else {
+        for (i, exploit) in exploits.iter().take(constants::MAX_DISPLAYED_EXPLOITS).enumerate() {
+            let cvss_indicator = format_cvss_indicator_as_string(exploit.cvss);
+            output.push_str(&format!("  {}{} {}\n", cvss_indicator, (i + 1), exploit.title));
+            
+            if !exploit.path.is_empty() {
+                output.push_str(&format!("    Path: {}\n", exploit.path));
+            }
+            
+            if i < exploits.len().saturating_sub(1) && i < constants::MAX_DISPLAYED_EXPLOITS - 1 {
+                output.push('\n');
+            }
+        }
+        
+        if exploits.len() > constants::MAX_DISPLAYED_EXPLOITS {
+            output.push_str(&format!(
+                "  MORE {} more exploits available\n",
+                exploits.len() - constants::MAX_DISPLAYED_EXPLOITS
+            ));
+        }
+    }
+    
+    output.push_str(&format!("{}\n", "=".repeat(header.len() + 8)));
+    
+    Ok(output)
+}
+
+/// Format CVSS indicator as string for file output
+fn format_cvss_indicator_as_string(cvss: Option<f32>) -> String {
+    match cvss {
+        Some(score) if score >= 9.0 => format!("[{}]", score),
+        Some(score) if score >= 7.0 => format!("[{}]", score),
+        Some(score) if score >= 4.0 => format!("[{}]", score),
+        Some(score) => format!("[{}]", score),
+        None => "[?.?]".to_string(),
+    }
 }
 
 #[cfg(test)]

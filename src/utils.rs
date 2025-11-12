@@ -79,26 +79,20 @@ pub fn check_binary_in_path(bin: &str) -> bool {
 
 /// Resolve target hostname or IP to socket addresses
 pub fn resolve_target(target: &str) -> Result<Vec<SocketAddr>> {
-    // Validate target first
-    let validated_target = validation::validate_target(target)?;
+    // Validate target first with enhanced validation for external tools
+    let validated_target = validation::validate_target_for_external_tools(target)?;
 
     let base = format!("{}:0", validated_target);
     match base.to_socket_addrs() {
         Ok(iter) => {
             let addrs: Vec<SocketAddr> = iter.collect();
             if addrs.is_empty() {
-                Err(OxideScannerError::target_resolution(format!(
-                    "could not resolve target: {}",
-                    target
-                )))
+                Err(OxideScannerError::network_error("target resolution", format!("could not resolve target: {}", target)))
             } else {
                 Ok(addrs)
             }
         }
-        Err(e) => Err(OxideScannerError::target_resolution(format!(
-            "resolve error: {}",
-            e
-        ))),
+        Err(e) => Err(OxideScannerError::network_error("target resolution", format!("resolve error: {}", e))),
     }
 }
 

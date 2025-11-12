@@ -44,10 +44,12 @@ use crate::error::{OxideScannerError, Result};
 use crate::external::nmap::NmapDetector;
 use crate::utils;
 use colored::*;
+use governor::{RateLimiter, Quota};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::net::{SocketAddr, TcpStream};
+use std::num::NonZeroU32;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
@@ -216,12 +218,28 @@ pub async fn fast_scan(target_addrs: &[SocketAddr], config: &Config) -> Result<V
     let addrs_clone = target_addrs.to_vec();
     let scan_timeout = config.scan_timeout;
 
+    // Create a shared rate limiter based on the config's scanner rate limit policy
+    let rate_limiter = if config.enable_rate_limiting {
+        Some(Arc::new(RateLimiter::direct(config.scanner_rate_limit.to_quota()?)))
+    } else {
+        None
+    };
+
     // Use rayon for parallel scanning
     let found_ports: Vec<Port> = ports
         .par_iter()
         .map_init(
-            || addrs_clone.clone(),
-            |addrs_local, &port| {
+            || {
+                let rate_limiter_opt = rate_limiter.as_ref().map(|rl| Arc::clone(rl));
+                (addrs_clone.clone(), rate_limiter_opt)
+            },
+            |(addrs_local, rate_limiter), &port| {
+                // Apply rate limiting if enabled
+                if let Some(ref limiter) = rate_limiter {
+                    // Wait for rate limiter allowance (blocking approach)
+                    let _ = limiter.until_ready();
+                }
+                
                 let is_open = tcp_connect_addrs(addrs_local, port, scan_timeout);
                 progress_reporter.increment();
 

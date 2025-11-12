@@ -43,6 +43,68 @@ pub fn validate_target(target: &str) -> Result<String> {
     Ok(target.to_string())
 }
 
+/// Validates a target specifically for use with external tools to prevent command injection
+pub fn validate_target_for_external_tools(target: &str) -> Result<String> {
+    validate_target(target)?;
+    
+    // Additional validation for external tool usage to prevent command injection
+    if target.chars().any(|c| matches!(c, ';' | '&' | '|' | '`' | '$' | '<' | '>' | '(' | ')' | '[' | ']' | '{' | '}' | '#' | '~' | '*' | '?' | '\\' | '\"' | '\'' | '%')) {
+        return Err(OxideScannerError::validation("Target contains shell metacharacters that could be used for command injection"));
+    }
+    
+    // Additional checks for valid IP address or hostname format
+    if !is_valid_hostname_format(target) && !is_valid_ip_format(target) {
+        return Err(OxideScannerError::validation("Target is not a valid hostname or IP address"));
+    }
+    
+    Ok(target.to_string())
+}
+
+/// Check if the string is a valid hostname format
+fn is_valid_hostname_format(hostname: &str) -> bool {
+    // Hostname validation: alphanumeric characters, dots, hyphens (but not at start/end)
+    if hostname.is_empty() || hostname.len() > 253 {
+        return false;
+    }
+
+    // Split by dots to validate each label
+    let labels: Vec<&str> = hostname.split('.').collect();
+    for label in labels {
+        if label.is_empty() || label.len() > 63 {
+            return false;
+        }
+        
+        // Label must start and end with alphanumeric
+        if !label.chars().next().unwrap_or('0').is_alphanumeric() || 
+           !label.chars().last().unwrap_or('0').is_alphanumeric() {
+            return false;
+        }
+        
+        // Can only contain alphanumeric, hyphens
+        if !label.chars().all(|c| c.is_alphanumeric() || c == '-') {
+            return false;
+        }
+    }
+    
+    true
+}
+
+/// Check if the string is a valid IP address format
+fn is_valid_ip_format(ip: &str) -> bool {
+    // Try parsing as IPv4 first
+    if ip.parse::<std::net::Ipv4Addr>().is_ok() {
+        return true;
+    }
+    
+    // If not IPv4, try IPv6
+    if ip.parse::<std::net::Ipv6Addr>().is_ok() {
+        return true;
+    }
+    
+    // Not a valid IP address
+    false
+}
+
 /// Validates port limit for scanning
 pub fn validate_port_limit(limit: u16) -> Result<u16> {
     if limit == 0 {

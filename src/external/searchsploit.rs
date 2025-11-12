@@ -51,6 +51,11 @@ impl ExploitSearcher {
         query: &str,
         timeout: Duration,
     ) -> Result<Vec<Exploit>> {
+        // Validate query to prevent command injection
+        if query.chars().any(|c| matches!(c, ';' | '&' | '|' | '`' | '$' | '<' | '>' | '(' | ')' | '[' | ']' | '{' | '}' | '#' | '~' | '*' | '?' | '\\' | '\"' | '\'' | '%')) {
+            return Err(OxideScannerError::validation("Query contains shell metacharacters that could be used for command injection"));
+        }
+        
         // Use JSON output with ID display for structured results
         let args = vec!["--json", "--id", query];
         let output = self.execute_with_timeout(&args, timeout).await?;

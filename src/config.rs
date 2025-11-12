@@ -71,6 +71,8 @@ pub struct Config {
     pub metrics: MetricsConfig,
     /// Retry configuration
     pub retry: RetryConfig,
+    /// Output file path (if specified)
+    pub output_file: Option<String>,
 }
 
 impl Config {
@@ -125,6 +127,9 @@ impl Config {
         let logging = LogConfig::from_env()?;
         let metrics = MetricsConfig::from_env()?;
         let retry = RetryConfig::from_env()?;
+        
+        // Parse output file
+        let output_file = Self::parse_output_file_arg(args)?;
 
         Ok(Config {
             target,
@@ -143,6 +148,7 @@ impl Config {
             logging,
             metrics,
             retry,
+            output_file,
         })
     }
 
@@ -316,6 +322,38 @@ impl Config {
         })
     }
 
+    /// Parse output file argument from command line
+    fn parse_output_file_arg(args: &[String]) -> Result<Option<String>> {
+        for (i, arg) in args.iter().enumerate() {
+            if arg == "--output" || arg == "-o" {
+                if i + 1 >= args.len() {
+                    return Err(OxideScannerError::config(
+                        "Missing output file path for --output flag"
+                    ));
+                }
+
+                let output_path = &args[i + 1];
+                
+                // Basic validation for the output path to prevent directory traversal
+                if output_path.contains("../") || output_path.starts_with("../") {
+                    return Err(OxideScannerError::config(
+                        "Output file path contains invalid directory traversal sequences"
+                    ));
+                }
+                
+                // Further validate to ensure path doesn't contain dangerous characters
+                if output_path.chars().any(|c| matches!(c, '|' | '&' | ';' | '`' | '$' | '{' | '}' | '[' | ']' | '(' | ')')) {
+                    return Err(OxideScannerError::config(
+                        "Output file path contains invalid characters"
+                    ));
+                }
+
+                return Ok(Some(output_path.clone()));
+            }
+        }
+        Ok(None)
+    }
+
     /// Load configuration from environment variables
     fn from_env() -> Result<Self> {
         let threads = if let Ok(threads) = std::env::var("OXIDE_THREADS") {
@@ -392,6 +430,7 @@ impl Config {
             logging,
             metrics,
             retry,
+            output_file: None, // Will be set from command line
         })
     }
 }

@@ -37,8 +37,8 @@ impl NmapDetector {
     ) -> Result<Vec<NmapService>> {
         let timeout = timeout.unwrap_or(Duration::from_secs(constants::NMAP_TIMEOUT_SECS));
 
-        // Validate inputs
-        let validated_target = validation::validate_target(target)?;
+        // Validate inputs with enhanced validation for external tools
+        let validated_target = validation::validate_target_for_external_tools(target)?;
         let port_list = self.format_port_list(ports)?;
         let validated_port_list = validation::validate_port_list(&port_list)?;
 

@@ -63,7 +63,8 @@ pub enum OxideScannerError {
     #[error("Service detection failed: {0}")]
     ServiceDetection(String),
 
-
+    #[error("Network error during scan: {operation} failed with {details}")]
+    NetworkError { operation: String, details: String },
 
     #[error("Target resolution failed: {0}")]
     TargetResolution(String),
@@ -108,6 +109,14 @@ impl OxideScannerError {
     /// Create a new target resolution error
     pub fn target_resolution(msg: impl Into<String>) -> Self {
         Self::TargetResolution(msg.into())
+    }
+
+    /// Create a new network error
+    pub fn network_error(operation: impl Into<String>, details: impl Into<String>) -> Self {
+        Self::NetworkError {
+            operation: operation.into(),
+            details: details.into(),
+        }
     }
 }
 
