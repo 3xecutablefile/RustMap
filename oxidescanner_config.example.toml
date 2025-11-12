@@ -1,0 +1,69 @@
+# OxideScanner Configuration File
+# This file contains default settings for OxideScanner
+
+# Target configuration
+target = "example.com"  # Target hostname or IP address (can be overridden via command line)
+
+# Output configuration
+json_mode = false       # Output in JSON format
+
+# Port configuration
+port_limit = 1000       # Number of top ports to scan (0 for all ports)
+# For port ranges, use port_start and port_end instead:
+# port_start = 1
+# port_end = 1000
+
+# Timeout configuration (in milliseconds)
+scan_timeout_ms = 25        # TCP connection timeout
+exploit_timeout_ms = 10000  # Exploit search timeout
+
+# Thread configuration
+threads = 0  # Number of threads to use (0 = auto-detect all cores)
+
+# Shutdown configuration (in seconds)
+shutdown_timeout_secs = 30
+
+# Rate limiting
+enable_rate_limiting = true
+
+# Rate limit policies
+[scanner_rate_limit]
+max_operations = 50
+period_secs = 1
+burst_capacity = 50
+
+[external_tools_rate_limit]
+max_operations = 5
+period_secs = 1
+burst_capacity = 5
+
+[exploit_queries_rate_limit]
+max_operations = 2
+period_secs = 1
+burst_capacity = 2
+
+# Logging configuration
+[logging]
+level = "info"
+console = true
+json = false
+console_timestamps = true
+max_file_size = 10485760  # 10MB
+max_files = 5
+
+# Metrics configuration
+[metrics]
+enabled = false
+prometheus_port = 9090
+export_interval_secs = 30
+
+# Retry configuration
+[retry]
+max_retries = 3
+base_delay_ms = 100
+max_delay_ms = 5000
+backoff_multiplier = 2.0
+jitter_factor = 0.1
+
+# Output configuration
+output_file = ""  # Path to output file (empty for stdout)
