@@ -133,72 +133,8 @@ async fn update_oxscan() -> Result<()> {
     }
     
     println!("{} OxideScanner updated and rebuilt successfully!", "SUCCESS".bright_green());
-
-    // Update searchsploit database
-    println!("{} Updating searchsploit database...", "INFO".bright_cyan());
-    let searchsploit_update_output = std::process::Command::new("searchsploit")
-        .arg("-u")
-        .output()
-        .map_err(|e| OxideScannerError::external_tool("searchsploit", format!("Failed to update searchsploit database: {}", e)))?;
-
-    if searchsploit_update_output.status.success() {
-        println!("{} Searchsploit database updated successfully", "SUCCESS".bright_green());
-    } else {
-        // Log the issue but don't fail the entire update
-        eprintln!("{} Warning: Searchsploit database update failed: {}", "WARNING".yellow(), 
-                  String::from_utf8_lossy(&searchsploit_update_output.stderr));
-    }
-
-    // Attempt to update nmap if possible (OS-specific)
-    println!("{} Checking for nmap updates...", "INFO".bright_cyan());
-    update_nmap_if_possible()?;
-
     println!("{} You can now use the updated version", "INFO".bright_cyan());
     
-    Ok(())
-}
-
-/// Attempt to update nmap based on the operating system
-fn update_nmap_if_possible() -> Result<()> {
-    // Check if nmap is installed first
-    let nmap_check = std::process::Command::new("nmap")
-        .arg("--version")
-        .output();
-
-    match nmap_check {
-        Ok(output) if output.status.success() => {
-            // Nmap is installed, try to update it using various package managers
-            let update_commands = vec![
-                // Try apt (Debian/Ubuntu)
-                ("sh", &["-c", "sudo apt update && sudo apt install -y nmap"][..]),
-                // Try pacman (Arch Linux) 
-                ("sh", &["-c", "sudo pacman -Syu nmap --noconfirm"][..]),
-                // Try brew (macOS)
-                ("brew", &["upgrade", "nmap"][..]),
-                // Try dnf (Fedora)
-                ("sh", &["-c", "sudo dnf update -y nmap"][..]),
-            ];
-
-            for (cmd, args) in update_commands {
-                let result = std::process::Command::new(cmd).args(args).output();
-
-                if let Ok(output) = result {
-                    if output.status.success() {
-                        println!("{} Nmap updated successfully using system package manager", "SUCCESS".bright_green());
-                        return Ok(());
-                    }
-                }
-            }
-            
-            // If all update attempts fail, just report that nmap is accessible
-            println!("{} Nmap is installed and accessible (update may require manual intervention or different package manager)", "INFO".bright_cyan());
-        },
-        _ => {
-            // Nmap not installed or not accessible
-            eprintln!("{} Warning: Nmap is not accessible, please install it manually", "WARNING".yellow());
-        }
-    }
-
     Ok(())
 }
 
