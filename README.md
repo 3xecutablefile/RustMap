@@ -133,7 +133,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Author
 
 **3xecutablefile**  
-*Security Tool Developer*
+*random kid*
 
 [![GitHub](https://img.shields.io/badge/GitHub-3xecutablefile-blue.svg)](https://github.com/3xecutablefile)
 
