@@ -167,9 +167,9 @@ Summary:
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Port Scanner  │───▶│  Service Detector│───▶│ Exploit Finder  │
 │                 │    │                  │    │                 │
-│ • Parallel TCP  │    │ • Nmap integration│    │ • Searchsploit  │
-│ • Thread pools  │    │ • Version detection│    │ • CVSS scoring  │
-│ • Rate limiting │    │ • Product ID      │    │ • Risk analysis │
+│ • Parallel TCP  │    │• Nmap integration│    │ • Searchsploit  │
+│ • Thread pools  │    │•Version detection│    │ • CVSS scoring  │
+│ • Rate limiting │    │• Product ID      │    │ • Risk analysis │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
