@@ -6,8 +6,6 @@ A rust-based scanner with built in exploit searching.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)]()
 
-<<<<<<< Updated upstream
-=======
 ## Features
 
 - **Fast port scanning** - Parallel TCP scanning with configurable threads
@@ -18,8 +16,6 @@ A rust-based scanner with built in exploit searching.
 - **Rate limiting** - Configurable to avoid detection
 - **Auto-update** - Built-in update mechanism
 
->>>>>>> Stashed changes
-
 ### Important
 **Only scan systems you own or have explicit permission to test.**
 
@@ -27,17 +23,12 @@ A rust-based scanner with built in exploit searching.
 
 ### Installation
 ```bash
-git clone https://github.com/NotSmartMan/OxideScanner.git
+git clone https://github.com/3xecutablefile/OxideScanner.git
 cd OxideScanner
 ./install.sh
 ```
 
 ### Basic Usage
-<<<<<<< Updated upstream
-
-
-Common options
-=======
 ```bash
 # Interactive mode - tool will ask you to enter port count
 oxscan scanme.nmap.org
@@ -62,7 +53,7 @@ oxscan --update
 
 ### Automated
 ```bash
-git clone https://github.com/NotSmartMan/OxideScanner.git
+git clone https://github.com/3xecutablefile/OxideScanner.git
 cd OxideScanner
 chmod +x install.sh
 ./install.sh
@@ -75,11 +66,18 @@ sudo apt install nmap ruby git        # Ubuntu/Debian
 brew install nmap ruby git            # macOS
 
 # Build from source
-git clone https://github.com/NotSmartMan/OxideScanner.git
+git clone https://github.com/3xecutablefile/OxideScanner.git
 cd OxideScanner
 cargo build --release
 sudo cp target/release/oxscan /usr/local/bin/
 ```
+
+### Updating
+OxideScanner includes a built-in update mechanism. To update to the latest version from the project directory:
+```bash
+oxscan --update
+```
+This command will either pull the latest changes from the repository (if installed as a git clone) or clone the latest version to a temporary directory and notify you of the changes.
 
 ## Usage Reference
 
@@ -97,7 +95,6 @@ oxscan <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout M
 | (no flag) | Interactive port selection | `oxscan target.com` |
 
 ### Other Options
->>>>>>> Stashed changes
 
 | Option | Description | Example |
 |--------|-------------|---------|
@@ -110,52 +107,10 @@ oxscan <target> [port-options] [--json] [--scan-timeout MS] [--exploit-timeout M
 | `--exploit-timeout MS` | Exploit search timeout | `--exploit-timeout 15000` |
 | `--update` | Update to latest version | `--update` |
 
-Command Syntax
-```bash
-oxscan <target> [options]
-```
-
-Configuration
-```bash
-export OXIDE_THREADS=8                    # Parallel scanning
-export OXIDE_SCAN_TIMEOUT=50              # Connection timeout
-export OXIDE_LOG_LEVEL=info               # Logging level
-export OXIDE_ENABLE_RATE_LIMIT=true       # Enable rate limiting
-```
-
-## Installation Options
-
-### Automated
-```bash
-git clone https://github.com/3xecutablefile/OxideScanner.git
-cd OxideScanner
-chmod +x install.sh
-./install.sh
-```
-
-### Manual Build
-```bash
-# Prerequisites
-sudo apt install nmap ruby git        
-brew install nmap ruby git            
-
-# Build from source
-git clone https://github.com/3xecutablefile/OxideScanner.git
-cd OxideScanner
-cargo build --release
-sudo cp target/release/oxscan /usr/local/bin/
-```
-
-
-
 ## Example
 
+### Basic Scanning
 ```bash
-<<<<<<< Updated upstream
-oxscan scanme.nmap.org
-```
-### Output:
-=======
 # Interactive scanning - tool asks for port count
 oxscan scanme.nmap.org
 
@@ -220,7 +175,6 @@ oxscan --help
 | **LOW** | <15 | Monitor |
 
 ### Sample Output
->>>>>>> Stashed changes
 ```
 FAST SCAN Fast scanning ports 1000-30000 on example.com...
 [████████████████████████████████████████] 100% | 29000/29000 scanned | 45.2s
@@ -249,20 +203,6 @@ Summary:
   Services analyzed: 3
 ```
 
-## Architecture
-
-
-### Core Components
-
-- **scanner** - High-performance parallel port scanning
-- **exploit** - Exploit database integration and risk scoring
-- **external** - Nmap and searchsploit tool abstractions
-- **utils** - Networking utilities and target resolution
-
-
-
-<<<<<<< Updated upstream
-=======
 ### Responsible Scanning
 ```bash
 # Conservative scanning to avoid detection
@@ -285,7 +225,7 @@ oxscan authorized-target.com --ports:1000-30000 --explicit-permission
 
 ### Building from Source
 ```bash
-git clone https://github.com/NotSmartMan/OxideScanner.git
+git clone https://github.com/3xecutablefile/OxideScanner.git
 cd OxideScanner
 cargo build --release
 ```
@@ -321,7 +261,6 @@ cargo clippy      # Linting
 - **Specific services**: 1-5 seconds
 - **Generic services**: <1 second (skipped)
 - **Large ranges**: Optimized caching
->>>>>>> Stashed changes
 
 ## Changelog
 
@@ -348,7 +287,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Author
 
-**3xecutablefile**  
+**3xecutablefile**
 *random kid*
 
 [![GitHub](https://img.shields.io/badge/GitHub-3xecutablefile-blue.svg)](https://github.com/3xecutablefile)

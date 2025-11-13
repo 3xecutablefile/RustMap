@@ -94,7 +94,7 @@ async fn update_oxscan() -> Result<()> {
             let clone_output = Command::new("git")
                 .args(&[
                     "clone",
-                    "https://github.com/NotSmartMan/OxideScanner.git",
+                    "https://github.com/3xecutablefile/OxideScanner.git",
                     &temp_dir
                 ])
                 .output()
