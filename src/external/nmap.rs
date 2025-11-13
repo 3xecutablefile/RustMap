@@ -77,6 +77,9 @@ impl NmapDetector {
             "--open".to_string(),
             "--disable-arp-ping".to_string(),
             "-Pn".to_string(), // Skip host discovery
+            "--host-timeout".to_string(), // Add host timeout to prevent hanging
+            "2m".to_string(), // 2 minute timeout per host
+            "--version-light".to_string(), // Lighter version detection
             target.to_string(),
         ]
     }

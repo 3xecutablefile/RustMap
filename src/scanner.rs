@@ -322,12 +322,34 @@ pub async fn detect_services(target: &str, ports: &[Port], config: &Config) -> R
     let port_numbers: Vec<u16> = ports.iter().map(|p| p.port).collect();
     let timeout = Some(Duration::from_secs(constants::NMAP_TIMEOUT_SECS));
 
-    let nmap_services = nmap_detector
+    let nmap_services_result = nmap_detector
         .detect_services(target, &port_numbers, timeout)
-        .await
-        .map_err(|e| {
-            OxideScannerError::service_detection(format!("Service detection failed: {}", e))
-        })?;
+        .await;
+
+    // Handle the service detection result
+    let nmap_services = match nmap_services_result {
+        Ok(services) => {
+            // Successfully detected services
+            services
+        }
+        Err(e) => {
+            // If detailed service detection fails, return the basic open ports
+            // This ensures that the tool can still proceed to exploit search with basic info
+            eprintln!("{} Service detection failed: {}. Proceeding with open ports only.", "WARNING".yellow(), e);
+            
+            // Create basic port information with "unknown" service
+            let basic_ports: Vec<Port> = ports.iter()
+                .cloned()
+                .map(|p| Port::with_service(p.port, "unknown".to_string(), "".to_string(), "".to_string()))
+                .collect();
+                
+            if !config.json_mode {
+                print_service_detection_results(&basic_ports);
+            }
+            
+            return Ok(basic_ports);
+        }
+    };
 
     // Convert nmap services to our Port format
     let mut detected_ports: Vec<Port> = nmap_services

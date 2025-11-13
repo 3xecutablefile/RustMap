@@ -45,10 +45,10 @@ pub const DEFAULT_SCAN_TIMEOUT_MS: u64 = 25;
 pub const DEFAULT_EXPLOIT_TIMEOUT_SECS: u64 = 10;
 
 /// Default timeout for nmap service detection in seconds
-pub const NMAP_TIMEOUT_SECS: u64 = 30;
+pub const NMAP_TIMEOUT_SECS: u64 = 60;
 
 /// Default nmap version intensity level
-pub const NMAP_VERSION_INTENSITY: u8 = 1;
+pub const NMAP_VERSION_INTENSITY: u8 = 2;
 
 /// Progress bar update interval in milliseconds
 pub const PROGRESS_UPDATE_INTERVAL_MS: u64 = 100;
