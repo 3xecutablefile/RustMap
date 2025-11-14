@@ -255,7 +255,8 @@ fn print_usage() {
     );
     eprintln!("Port Options:");
     eprintln!("  --ports:START-END  Scan port range (e.g., --ports:1000-30000)");
-    eprintln!("  --ports N           Scan N ports from top (e.g., --ports 1000)");
+    eprintln!("  --ports N          Scan N ports from 1 to N (e.g., --ports 1000)");
+    eprintln!("  -NK                Scan N*1000 ports from 1 to N*1000 (e.g., -1k = 1000 ports, -5k = 5000 ports)");
     eprintln!("  (no flag)           Interactively choose port count");
     eprintln!("Other Options:");
     eprintln!("  --json              Output in JSON format");
@@ -269,7 +270,9 @@ fn print_usage() {
     eprintln!("Examples:");
     eprintln!("  oxscan scanme.nmap.org               # Interactively choose ports");
     eprintln!("  oxscan example.com --ports:1000-30000 --threads:6  # Scan range with 6 threads");
-    eprintln!("  oxscan example.com --ports 1000     # Scan top 1000 ports");
+    eprintln!("  oxscan example.com --ports 1000     # Scan 1000 ports (1-1000)");
+    eprintln!("  oxscan example.com -1k              # Scan 1000 ports (1-1000)");
+    eprintln!("  oxscan example.com -5k              # Scan 5000 ports (1-5000)");
     eprintln!("  oxscan 192.168.1.1 --json          # Output in JSON format");
     eprintln!("  oxscan target.com --output results.txt  # Save results to file");
     eprintln!("  oxscan --update                     # Update to latest version");
@@ -323,7 +326,7 @@ fn print_scan_start(config: &config::Config) {
     } else if config.port_limit == constants::ports::MAX {
         "all ports".to_string()
     } else {
-        format!("top {} ports", config.port_limit)
+        format!("ports 1-{}", config.port_limit)
     };
 
     println!(

@@ -178,7 +178,7 @@ impl Config {
         Ok(Duration::from_millis(default_ms))
     }
 
-    /// Parse port limit from --ports N format
+    /// Parse port limit from --ports N or -1k format
     fn parse_numeric_port_flag(args: &[String]) -> Result<Option<u16>> {
         // Check for --ports flag
         for (i, arg) in args.iter().enumerate() {
@@ -200,6 +200,40 @@ impl Config {
                 }
 
                 return Ok(Some(port_count));
+            }
+        }
+
+        // Check for -1k, -2k, -5k format
+        for arg in args.iter() {
+            if arg.starts_with('-') && arg.len() > 1 {
+                let arg_chars: Vec<char> = arg.chars().collect();
+                if arg_chars[1].is_numeric() {
+                    // Check if it ends with 'k' or 'K'
+                    let last_char = arg_chars.last().unwrap();
+                    if last_char.to_lowercase().to_string() == "k" {
+                        // Extract the number part
+                        let num_part = &arg[1..arg.len()-1]; // Remove the '-' and 'k'
+                        let multiplier = num_part.parse::<u32>().map_err(|_| {
+                            OxideScannerError::config(format!("Invalid port count multiplier: {}", num_part))
+                        })?;
+                        
+                        let port_count = (multiplier * 1000) as u16;
+                        
+                        if port_count < 1 {
+                            return Err(OxideScannerError::config(
+                                "Port count must be at least 1",
+                            ));
+                        }
+                        
+                        if port_count > constants::ports::MAX {
+                            return Err(OxideScannerError::config(
+                                format!("Port count exceeds maximum: {}", constants::ports::MAX),
+                            ));
+                        }
+                        
+                        return Ok(Some(port_count));
+                    }
+                }
             }
         }
 
@@ -251,7 +285,7 @@ impl Config {
     /// Prompt user for port limit interactively
     fn prompt_port_limit() -> Result<u16> {
         print!(
-            "{} Enter number of ports to scan (1-65535, or 'all' for full scan): ",
+            "{} Enter number of ports to scan (1-N where N is 1-65535, or 'all' for full scan): ",
             "→".bright_cyan()
         );
 
