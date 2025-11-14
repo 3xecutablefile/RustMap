@@ -42,6 +42,7 @@ use crate::config::Config;
 use crate::constants;
 use crate::error::{OxideScannerError, Result};
 use crate::external::nmap::NmapDetector;
+use crate::external::http_detector::HttpDetector;
 use crate::utils;
 use colored::*;
 use governor::{RateLimiter, Quota};
@@ -326,44 +327,83 @@ pub async fn detect_services(target: &str, ports: &[Port], config: &Config) -> R
         .detect_services(target, &port_numbers, timeout)
         .await;
 
-    // Handle the service detection result
-    let nmap_services = match nmap_services_result {
+    // Handle the nmap service detection result
+    let mut nmap_detected_ports: Vec<Port> = match nmap_services_result {
         Ok(services) => {
-            // Successfully detected services
+            // Successfully detected services via nmap
             services
+                .into_iter()
+                .map(|ns| Port::with_service(ns.port, ns.service, ns.product, ns.version))
+                .collect()
         }
         Err(e) => {
-            // If detailed service detection fails, return the basic open ports
-            // This ensures that the tool can still proceed to exploit search with basic info
-            eprintln!("{} Service detection failed: {}. Proceeding with open ports only.", "WARNING".yellow(), e);
-            
-            // Create basic port information with "unknown" service
-            let basic_ports: Vec<Port> = ports.iter()
+            eprintln!("{} Nmap service detection failed: {}. Attempting HTTP header detection.", "WARNING".yellow(), e);
+            // Create ports with basic info to try HTTP detection
+            ports.iter()
                 .cloned()
                 .map(|p| Port::with_service(p.port, "unknown".to_string(), "".to_string(), "".to_string()))
-                .collect();
-                
-            if !config.json_mode {
-                print_service_detection_results(&basic_ports);
-            }
-            
-            return Ok(basic_ports);
+                .collect()
         }
     };
 
-    // Convert nmap services to our Port format
-    let mut detected_ports: Vec<Port> = nmap_services
-        .into_iter()
-        .map(|ns| Port::with_service(ns.port, ns.service, ns.product, ns.version))
-        .collect();
+    // Enhance service detection with HTTP headers for web ports
+    let http_detector = HttpDetector::new();
+    let http_services = http_detector.detect_services(target, &port_numbers).await.unwrap_or_default();
 
-    detected_ports.sort_by_key(|p| p.port);
-
-    if !config.json_mode {
-        print_service_detection_results(&detected_ports);
+    // Enhance the nmap detected ports with HTTP header information when available
+    for http_service in http_services {
+        if let Some(port) = nmap_detected_ports.iter_mut().find(|p| p.port == http_service.port) {
+            // If we got a more specific service name from HTTP headers, use it
+            if !http_service.server_header.is_empty() {
+                if port.service == "unknown" || port.service == "http" || port.service == "https" {
+                    port.service = http_service.server_header.clone();
+                }
+                
+                // Set product and version from server header if not already set
+                if port.product.is_empty() {
+                    port.product = http_service.server_header.clone();
+                }
+            }
+            
+            // Add powered by information as well
+            if !http_service.powered_by_header.is_empty() && port.version.is_empty() {
+                port.version = http_service.powered_by_header.clone();
+            }
+        } else {
+            // If nmap didn't detect the service, add HTTP detection info
+            let service_name = if !http_service.server_header.is_empty() {
+                http_service.server_header.clone()
+            } else {
+                if http_service.port == 443 || http_service.port == 8443 {
+                    "https".to_string()
+                } else {
+                    "http".to_string()
+                }
+            };
+            
+            let product = if !http_service.server_header.is_empty() {
+                http_service.server_header.clone()
+            } else {
+                "".to_string()
+            };
+            
+            let version = if !http_service.powered_by_header.is_empty() {
+                http_service.powered_by_header.clone()
+            } else {
+                "".to_string()
+            };
+            
+            nmap_detected_ports.push(Port::with_service(http_service.port, service_name, product, version));
+        }
     }
 
-    Ok(detected_ports)
+    nmap_detected_ports.sort_by_key(|p| p.port);
+
+    if !config.json_mode {
+        print_service_detection_results(&nmap_detected_ports);
+    }
+
+    Ok(nmap_detected_ports)
 }
 
 /// Print scan summary in non-JSON mode

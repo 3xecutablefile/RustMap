@@ -32,6 +32,7 @@
 
 pub mod nmap;
 pub mod searchsploit;
+pub mod http_detector;
 
 use crate::error::{OxideScannerError, Result};
 use std::process::Output;

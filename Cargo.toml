@@ -7,8 +7,8 @@ description = "Enterprise network security scanner with intelligent exploit disc
 license = "MIT"
 keywords = ["security", "scanner", "network", "exploit", "port-scanner"]
 categories = ["command-line-utilities", "network-programming"]
-repository = "https://github.com/NotSmartMan/OxideScanner"
-homepage = "https://github.com/NotSmartMan/OxideScanner"
+repository = "https://github.com/3xecutablefile/Oxidescanner.git"
+homepage = "https://github.com/3xecutablefile/Oxidescanner.git"
 documentation = "https://docs.rs/oxidescanner"
 readme = "README.md"
 
@@ -35,6 +35,7 @@ metrics-exporter-prometheus = "0.13"
 chrono = { version = "0.4", features = ["serde"] }
 rand = "0.8"
 atty = "0.2"
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
