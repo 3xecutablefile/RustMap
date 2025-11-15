@@ -48,9 +48,9 @@ install_pkg() {
         print_success "$pkg already installed"
         return
     fi
-    
+
     print_info "Installing $pkg..."
-    
+
     if [ "$OS" = "linux" ]; then
         if cmd_exists apt-get; then
             sudo apt-get update && sudo apt-get install -y "$pkg"
@@ -72,6 +72,16 @@ install_pkg() {
     fi
 }
 
+# Ensure sudo access is available
+if [ "$EUID" -ne 0 ]; then
+    print_info "This script requires sudo access for installing dependencies."
+    print_info "You will be prompted for your password."
+    sudo -v || { print_error "Sudo access is required for installation"; exit 1; }
+
+    # Keep sudo timestamp updated throughout the installation
+    (while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done) & SUDO_REFRESH_PID=$!
+fi
+
 # Install Rust
 if ! cmd_exists cargo; then
     print_info "Installing Rust..."
@@ -82,7 +92,24 @@ else
     print_success "Rust already installed"
 fi
 
-# Install dependencies
+# Install system dependencies for Rust compilation
+print_info "Installing system dependencies..."
+if [ "$OS" = "linux" ]; then
+    if cmd_exists apt-get; then
+        print_info "Installing build-essential, pkg-config, and libssl-dev..."
+        sudo apt-get update
+        sudo apt-get install -y build-essential pkg-config libssl-dev
+    elif cmd_exists yum; then
+        sudo yum install -y gcc pkgconfig openssl-devel
+    elif cmd_exists dnf; then
+        sudo dnf install -y gcc pkgconfig openssl-devel
+    else
+        print_error "No supported package manager found for system dependencies"
+        exit 1
+    fi
+fi
+
+# Install application dependencies
 print_info "Installing dependencies..."
 install_pkg "nmap" "nmap"
 install_pkg "Ruby" "ruby"
