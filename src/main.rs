@@ -61,6 +61,9 @@ async fn update_oxscan() -> Result<()> {
                 ));
             }
 
+            // Sanitize the remote URL to prevent command injection
+            let _ = sanitize_git_url(&remote_url)?;
+
             println!("{} Git repository verified as OxideScanner, pulling latest changes...", "INFO".bright_cyan());
 
             // Pull latest changes
@@ -89,7 +92,20 @@ async fn update_oxscan() -> Result<()> {
                 .as_secs();
             
             let temp_dir = format!("/tmp/oxscan-update-{}", timestamp);
-            
+
+            // Sanitize the temp directory path to prevent directory traversal
+            if !is_safe_path(&temp_dir) {
+                return Err(OxideScannerError::external_tool(
+                    "update",
+                    format!("Unsafe temporary directory path: {}", temp_dir)
+                ));
+            }
+
+            // Create temporary directory with restricted permissions
+            use std::fs;
+            fs::create_dir_all(&temp_dir)
+                .map_err(|e| OxideScannerError::external_tool("update", format!("Failed to create temp directory: {}", e)))?;
+
             // Clone the repository to the unique temporary directory
             let clone_output = Command::new("git")
                 .args(&[
@@ -164,8 +180,48 @@ async fn update_oxscan() -> Result<()> {
     update_nmap_if_possible()?;
 
     println!("{} You can now use the updated version", "INFO".bright_cyan());
-    
+
     Ok(())
+}
+
+/// Sanitize git URL to prevent command injection
+fn sanitize_git_url(url: &str) -> Result<String> {
+    // Only allow alphanumeric characters, hyphens, underscores, dots, slashes, colons, and @
+    let valid_chars = regex::Regex::new(r"^[a-zA-Z0-9._\-@:/~]+$")
+        .map_err(|e| OxideScannerError::external_tool("regex", format!("Failed to compile regex: {}", e)))?;
+
+    if !valid_chars.is_match(url) {
+        return Err(OxideScannerError::external_tool(
+            "update",
+            format!("Git URL contains invalid characters: {}", url)
+        ));
+    }
+
+    // Additional checks for common command injection patterns
+    if url.contains("..") || url.contains(";") || url.contains("&") ||
+       url.contains("|") || url.contains("`") || url.contains("$(") || url.contains("\"") || url.contains("'") {
+        return Err(OxideScannerError::external_tool(
+            "update",
+            format!("Git URL contains potential command injection: {}", url)
+        ));
+    }
+
+    Ok(url.to_string())
+}
+
+/// Validate that a path is safe to use (no directory traversal)
+fn is_safe_path(path: &str) -> bool {
+    // Check for directory traversal patterns
+    if path.contains("../") || path.contains("..\\") {
+        return false;
+    }
+
+    // Ensure the path starts with expected prefix
+    if !path.starts_with("/tmp/oxscan-update-") {
+        return false;
+    }
+
+    true
 }
 
 /// Attempt to update nmap based on the operating system
