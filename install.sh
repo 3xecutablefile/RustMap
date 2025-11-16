@@ -118,20 +118,162 @@ install_pkg "Ruby" "ruby"
 if ! cmd_exists searchsploit; then
     print_info "Installing searchsploit..."
     if [ "$OS" = "linux" ]; then
-        sudo apt-get install -y exploitdb 2>/dev/null || {
-            # Manual installation
-            sudo git clone https://github.com/offensive-security/exploitdb.git /opt/searchsploit
-            sudo ln -sf /opt/searchsploit/searchsploit /usr/local/bin/
-        }
+        # Try package manager first
+        if cmd_exists dnf; then
+            print_info "Using DNF package manager to install exploitdb..."
+            if sudo dnf install -y exploitdb; then
+                print_success "exploitdb installed via DNF"
+            else
+                print_error "Failed to install exploitdb via DNF, trying manual installation"
+                # Manual installation - Note: Official repo moved to GitLab
+                if sudo git clone https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb; then
+                    sudo cp -n /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+                    sudo chmod +x /usr/local/bin/searchsploit
+                    # Update the database
+                    sudo /opt/exploitdb/searchsploit -u
+                    print_success "Manual installation completed"
+                else
+                    print_error "Manual installation failed"
+                    exit 1
+                fi
+            fi
+        elif cmd_exists yum; then
+            print_info "Using YUM package manager to install exploitdb..."
+            if sudo yum install -y exploitdb; then
+                print_success "exploitdb installed via YUM"
+            else
+                print_error "Failed to install exploitdb via YUM, trying manual installation"
+                # Manual installation - Note: Official repo moved to GitLab
+                if sudo git clone https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb; then
+                    sudo cp -n /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+                    sudo chmod +x /usr/local/bin/searchsploit
+                    # Update the database
+                    sudo /opt/exploitdb/searchsploit -u
+                    print_success "Manual installation completed"
+                else
+                    print_error "Manual installation failed"
+                    exit 1
+                fi
+            fi
+        elif cmd_exists apt-get; then
+            print_info "Using APT package manager to install exploitdb..."
+            if sudo apt-get update && sudo apt-get install -y exploitdb; then
+                print_success "exploitdb installed via APT"
+            else
+                print_error "Failed to install exploitdb via APT, trying manual installation"
+                # Manual installation - Note: Official repo moved to GitLab
+                if sudo git clone https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb; then
+                    sudo cp -n /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+                    sudo chmod +x /usr/local/bin/searchsploit
+                    # Update the database
+                    sudo /opt/exploitdb/searchsploit -u
+                    print_success "Manual installation completed"
+                else
+                    print_error "Manual installation failed"
+                    exit 1
+                fi
+            fi
+        else
+            print_warning "No supported package manager found for exploitdb, using manual installation"
+            # Manual installation - Note: Official repo moved to GitLab
+            if sudo git clone https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb; then
+                sudo cp -n /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+                sudo chmod +x /usr/local/bin/searchsploit
+                # Update the database
+                sudo /opt/exploitdb/searchsploit -u
+                print_success "Manual installation completed"
+            else
+                print_error "Manual installation failed"
+                exit 1
+            fi
+        fi
     elif [ "$OS" = "macos" ]; then
-        brew install exploitdb 2>/dev/null || {
-            sudo git clone https://github.com/offensive-security/exploitdb.git /opt/searchsploit
-            sudo ln -sf /opt/searchsploit/searchsploit /usr/local/bin/
-        }
+        if cmd_exists brew; then
+            print_info "Using Homebrew to install exploitdb..."
+            if brew install exploitdb; then
+                print_success "exploitdb installed via Homebrew"
+            else
+                print_error "Failed to install exploitdb via Homebrew, trying manual installation"
+                # Manual installation for macOS - Note: Official repo moved to GitLab
+                if sudo git clone https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb; then
+                    sudo cp -n /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+                    sudo chmod +x /usr/local/bin/searchsploit
+                    # Update the database
+                    sudo /opt/exploitdb/searchsploit -u
+                    print_success "Manual installation completed"
+                else
+                    print_error "Manual installation failed"
+                    exit 1
+                fi
+            fi
+        else
+            # Manual installation for macOS - Note: Official repo moved to GitLab
+            print_info "Homebrew not found, using manual installation"
+            if sudo git clone https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb; then
+                sudo cp -n /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
+                sudo chmod +x /usr/local/bin/searchsploit
+                # Update the database
+                sudo /opt/exploitdb/searchsploit -u
+                print_success "Manual installation completed"
+            else
+                print_error "Manual installation failed"
+                exit 1
+            fi
+        fi
     fi
-    print_success "searchsploit installed"
+
+    # Verify installation
+    if cmd_exists searchsploit; then
+        print_success "searchsploit installed"
+
+        # Additional verification - check if searchsploit works
+        if searchsploit -v 2>/dev/null | grep -q "Exploit Database\|searchsploit"; then
+            print_success "searchsploit verification successful"
+        else
+            print_warning "searchsploit installed but basic verification failed"
+            # Try to run a simple search to verify functionality
+            if searchsploit test 2>/dev/null | head -5 | grep -q "Exploit Database\|Description\|Path"; then
+                print_success "searchsploit functionality test passed"
+            else
+                print_error "searchsploit functionality test failed"
+                exit 1
+            fi
+        fi
+
+        # Verify searchsploit script is executable
+        if [ -x "/usr/local/bin/searchsploit" ]; then
+            print_success "searchsploit executable permissions OK"
+        else
+            print_error "searchsploit lacks execute permissions"
+            sudo chmod +x /usr/local/bin/searchsploit
+            if [ -x "/usr/local/bin/searchsploit" ]; then
+                print_success "searchsploit permissions fixed"
+            else
+                print_error "could not set execute permissions on searchsploit"
+                exit 1
+            fi
+        fi
+    else
+        print_error "searchsploit installation failed"
+        exit 1
+    fi
 else
     print_success "searchsploit already installed"
+
+    # Verify existing installation
+    if searchsploit -v 2>/dev/null | grep -q "Exploit Database\|searchsploit"; then
+        print_success "searchsploit verification successful"
+    else
+        print_warning "searchsploit found but verification failed - updating database"
+        searchsploit -u 2>/dev/null || print_warning "Could not update exploitdb"
+
+        # Test functionality after update
+        if searchsploit test 2>/dev/null | head -5 | grep -q "Exploit Database\|Description\|Path"; then
+            print_success "searchsploit functionality test passed after update"
+        else
+            print_warning "searchsploit may have issues after update"
+        fi
+    fi
 fi
 
 # Build OxideScanner
